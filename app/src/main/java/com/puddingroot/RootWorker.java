@@ -28,8 +28,11 @@ public class RootWorker extends Worker {
         if (!prefs.getBoolean("auto_root", false)) {
             return Result.success();
         }
-        if (!waitForShizuku(120_000L)) {
-            Notifier.notify(ctx, "PuddingRoot", "Auto-root skipped: Shizuku is not running.", Notifier.ID_AUTO);
+        if (!waitForShizuku(300_000L)) {
+            Notifier.notify(ctx, "PuddingRoot",
+                    "Auto-root skipped: Shizuku not ready. Enable Autostart for PuddingRoot "
+                            + "and Shizuku in HyperOS settings, then open the app.",
+                    Notifier.ID_AUTO);
             return Result.failure();
         }
         String pkg = prefs.getString("ksu_pkg", "me.weishu.kernelsu");
