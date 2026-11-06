@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -24,20 +24,34 @@ jobs:
       - name: Install Android SDK components
         run: |
           SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          echo "SDK_ROOT=$SDK_ROOT"
           SDKMANAGER=$(ls "$SDK_ROOT"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)
-          echo "sdkmanager=$SDKMANAGER"
           yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
           "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0" "platform-tools"
           echo "sdk.dir=$SDK_ROOT" > local.properties
 
       - name: Build release APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: PuddingRoot-apk
           path: app/build/outputs/apk/release/*.apk
+
+      - name: Create prerelease
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(cat version.txt)"
+          cp app/build/outputs/apk/release/app-release.apk "PuddingRoot-${VERSION}.apk"
+          gh release delete "v${VERSION}" --cleanup-tag --yes --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+          gh release create "v${VERSION}" "PuddingRoot-${VERSION}.apk" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "PuddingRoot ${VERSION}" \
+            --notes "PuddingRoot beta ${VERSION}. Install only on the supported Xiaomi 17 Global build." \
+            --prerelease

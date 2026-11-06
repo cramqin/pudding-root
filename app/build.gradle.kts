@@ -6,6 +6,7 @@ plugins {
 // uses the same key (updates install over the previous build). Rotate it and
 // move it to a secret before making the repo public.
 val keystoreFile = rootProject.file("keystore.p12")
+val appVersion = rootProject.file("version.txt").readText().trim().ifEmpty { "0.0.1-beta" }
 
 android {
     namespace = "com.puddingroot"
@@ -16,7 +17,7 @@ android {
         minSdk = 31
         targetSdk = 34
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
-        versionName = System.getenv("VERSION_NAME") ?: "0.0.1-beta"
+        versionName = appVersion
         ndk {
             abiFilters += listOf("arm64-v8a")
         }

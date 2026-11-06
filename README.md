@@ -53,18 +53,12 @@ never re-run on the same boot after a park.
 
 ### GitHub Actions (recommended)
 
-Push to `main`; the workflow builds `app/build/outputs/apk/release/*.apk` and
-uploads it as the `PuddingRoot-apk` artifact.
+Push to `main`; one push both builds the APK **and** publishes a GitHub
+prerelease. The version comes from [`version.txt`](version.txt) — bump it (e.g.
+`0.0.2-beta`) before pushing a new release.
 
-To publish an installable prerelease, create and push a version tag:
-
-```sh
-git tag v0.0.1-beta
-git push origin v0.0.1-beta
-```
-
-The tag workflow creates a GitHub prerelease with the APK attached. Future
-beta updates use the same pattern with a higher tag, such as `v0.0.2-beta`.
+The workflow uploads the APK as the `PuddingRoot-apk` artifact and creates a
+prerelease (`v<version>`) with the APK attached.
 
 Releases are signed with a committed keystore (`keystore.p12`), so new versions
 install over the previous one. Rotate the key (and move it to a secret) before
