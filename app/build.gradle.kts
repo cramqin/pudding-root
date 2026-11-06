@@ -1,13 +1,11 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
 }
 
-// Optional release signing: if keystore.jks exists at the repo root (CI decodes
-// it from a secret), sign with it; otherwise fall back to the debug key.
-val keystoreFile = rootProject.file("keystore.jks")
-val hasKeystore = keystoreFile.exists()
+// Stable release signing: keystore.p12 is committed to the repo so every build
+// uses the same key (updates install over the previous build). Rotate it and
+// move it to a secret before making the repo public.
+val keystoreFile = rootProject.file("keystore.p12")
 
 android {
     namespace = "com.puddingroot"
@@ -25,13 +23,12 @@ android {
     }
 
     signingConfigs {
-        if (hasKeystore) {
-            create("release") {
-                storeFile = keystoreFile
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS") ?: "puddingroot"
-                keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("KEYSTORE_PASSWORD")
-            }
+        create("release") {
+            storeFile = keystoreFile
+            storeType = "pkcs12"
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "puddingroot"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "puddingroot"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "puddingroot"
         }
     }
 
@@ -42,11 +39,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = if (hasKeystore) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
@@ -69,5 +62,4 @@ android {
 dependencies {
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
-    implementation("androidx.work:work-runtime:2.9.1")
 }

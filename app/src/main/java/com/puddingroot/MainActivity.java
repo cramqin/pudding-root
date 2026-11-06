@@ -12,7 +12,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
@@ -38,7 +37,6 @@ public class MainActivity extends Activity {
     private Button rebootBtn;
     private EditText pkgEdit;
     private Spinner managerSpinner;
-    private CheckBox autoRootBox;
     private SharedPreferences prefs;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private volatile boolean running = false;
@@ -62,13 +60,9 @@ public class MainActivity extends Activity {
         rebootBtn = findViewById(R.id.reboot);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
-        autoRootBox = findViewById(R.id.auto_root);
         logView.setMovementMethod(new ScrollingMovementMethod());
 
         prefs = getSharedPreferences("cfg", MODE_PRIVATE);
-        autoRootBox.setChecked(prefs.getBoolean("auto_root", false));
-        autoRootBox.setOnCheckedChangeListener((cb, checked) ->
-                prefs.edit().putBoolean("auto_root", checked).apply());
         Notifier.ensureChannel(this);
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)

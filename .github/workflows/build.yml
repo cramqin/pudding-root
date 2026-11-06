@@ -31,20 +31,7 @@ jobs:
           "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0" "platform-tools"
           echo "sdk.dir=$SDK_ROOT" > local.properties
 
-      - name: Decode keystore (optional)
-        run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore.jks
-            echo "Using provided signing key."
-          else
-            echo "No KEYSTORE_BASE64 secret; release APK will be debug-signed."
-          fi
-
       - name: Build release APK
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon --stacktrace

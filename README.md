@@ -66,14 +66,9 @@ git push origin v0.0.1-beta
 The tag workflow creates a GitHub prerelease with the APK attached. Future
 beta updates use the same pattern with a higher tag, such as `v0.0.2-beta`.
 
-Optional stable signing — add repository secrets:
-
-- `KEYSTORE_BASE64` — base64 of a JKS keystore
-- `KEYSTORE_PASSWORD`
-- `KEY_ALIAS`
-- `KEY_PASSWORD`
-
-Without them the release APK is signed with the CI debug key.
+Releases are signed with a committed keystore (`keystore.p12`), so new versions
+install over the previous one. Rotate the key (and move it to a secret) before
+making the repo public.
 
 ### Local
 
