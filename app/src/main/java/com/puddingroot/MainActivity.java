@@ -12,6 +12,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+
 import rikka.shizuku.Shizuku;
 
 public class MainActivity extends Activity {
@@ -67,7 +70,22 @@ public class MainActivity extends Activity {
     }
 
     private String kernelVersion() {
-        return System.getProperty("os.version", "?");
+        String v = System.getProperty("os.version", "");
+        if (v == null || v.isEmpty()) {
+            // Fallback: /proc/version is "Linux version <release> (...)".
+            try (BufferedReader r = new BufferedReader(new FileReader("/proc/version"))) {
+                String line = r.readLine();
+                if (line != null) {
+                    String[] parts = line.trim().split("\\s+");
+                    if (parts.length >= 3) {
+                        v = parts[2];
+                    }
+                }
+            } catch (Throwable ignored) {
+                // keep whatever os.version gave us
+            }
+        }
+        return (v == null || v.isEmpty()) ? "?" : v;
     }
 
     private boolean deviceSupported() {
