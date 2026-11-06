@@ -143,26 +143,49 @@
                 android:id="@+id/copy_log"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
-                android:layout_marginEnd="5dp"
+                android:layout_marginEnd="4dp"
                 android:layout_weight="1"
                 android:backgroundTint="#293240"
                 android:text="COPY LOG"
                 android:textAllCaps="false"
                 android:textColor="#E8EDF4"
-                android:textSize="12sp" />
+                android:textSize="11sp" />
 
             <Button
                 android:id="@+id/reboot"
                 android:layout_width="0dp"
                 android:layout_height="44dp"
-                android:layout_marginStart="5dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
                 android:layout_weight="1"
                 android:backgroundTint="#293240"
-                android:text="REBOOT DEVICE"
+                android:text="REBOOT"
                 android:textAllCaps="false"
                 android:textColor="#E8EDF4"
-                android:textSize="12sp" />
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/power_off"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:backgroundTint="#293240"
+                android:tooltipText="Power off, wait ~2 minutes, then turn on for the best success rate."
+                android:text="POWER OFF"
+                android:textAllCaps="false"
+                android:textColor="#E8EDF4"
+                android:textSize="11sp" />
         </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:text="Tip: a cold boot helps — power off ~2 min, then turn on, for the best success rate."
+            android:textColor="#8F9AA8"
+            android:textSize="11sp" />
 
         <TextView
             android:layout_width="match_parent"

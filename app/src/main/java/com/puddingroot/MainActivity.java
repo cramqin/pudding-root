@@ -35,6 +35,7 @@ public class MainActivity extends Activity {
     private Button shizukuBtn;
     private Button copyLogBtn;
     private Button rebootBtn;
+    private Button powerOffBtn;
     private EditText pkgEdit;
     private Spinner managerSpinner;
     private SharedPreferences prefs;
@@ -58,6 +59,7 @@ public class MainActivity extends Activity {
         shizukuBtn = findViewById(R.id.shizuku);
         copyLogBtn = findViewById(R.id.copy_log);
         rebootBtn = findViewById(R.id.reboot);
+        powerOffBtn = findViewById(R.id.power_off);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
         logView.setMovementMethod(new ScrollingMovementMethod());
@@ -95,6 +97,7 @@ public class MainActivity extends Activity {
         shizukuBtn.setOnClickListener(v -> requestShizuku());
         copyLogBtn.setOnClickListener(v -> copyLog());
         rebootBtn.setOnClickListener(v -> rebootDevice());
+        powerOffBtn.setOnClickListener(v -> powerOffDevice());
 
         refreshStatus();
         if (!deviceSupported()) {
@@ -172,6 +175,7 @@ public class MainActivity extends Activity {
         shizukuBtn.setText(shizukuReady ? "SHIZUKU ACCESS GRANTED" : "REQUEST SHIZUKU ACCESS");
         rootBtn.setEnabled(ok && shizukuReady && !running);
         rebootBtn.setEnabled(shizukuReady && !running);
+        powerOffBtn.setEnabled(shizukuReady && !running);
         copyLogBtn.setEnabled(logView.length() > 0);
     }
 
@@ -319,6 +323,16 @@ public class MainActivity extends Activity {
     }
 
     private void rebootDevice() {
+        issuePowerCommand("svc power reboot 2>&1 || setprop sys.powerctl reboot 2>&1",
+                "Reboot", "Rebooting…", "reboot");
+    }
+
+    private void powerOffDevice() {
+        issuePowerCommand("svc power shutdown 2>&1 || setprop sys.powerctl shutdown 2>&1",
+                "Power off", "Powering off…", "power off");
+    }
+
+    private void issuePowerCommand(String command, String action, String toastMsg, String logLabel) {
         try {
             if (!Shizuku.pingBinder()
                     || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
@@ -329,11 +343,10 @@ public class MainActivity extends Activity {
             toast("Shizuku error: " + t.getClass().getSimpleName());
             return;
         }
-        toast("Rebooting…");
-        appendLog("--- reboot requested ---");
+        toast(toastMsg);
+        appendLog("--- " + logLabel + " requested ---");
         new Thread(() -> {
-            String out = RootRunner.runShizukuCommand(
-                    "svc power reboot 2>&1 || setprop sys.powerctl reboot 2>&1");
+            String out = RootRunner.runShizukuCommand(command);
             String o = out == null ? "" : out.trim();
             ui.post(() -> {
                 if (!o.isEmpty()) {
@@ -341,8 +354,8 @@ public class MainActivity extends Activity {
                 }
                 if (o.contains("SecurityException") || o.contains("denied")
                         || o.contains("Permission") || o.contains("not permitted")) {
-                    appendLog("Reboot blocked by this ROM (no shell permission). Reboot manually.");
-                    toast("Reboot blocked — reboot manually");
+                    appendLog(action + " blocked by this ROM (no shell permission). Do it manually.");
+                    toast(action + " blocked — do it manually");
                 }
             });
         }).start();
