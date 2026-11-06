@@ -111,9 +111,12 @@ public class MainActivity extends Activity {
             shizuku = "Shizuku: unavailable (" + t.getClass().getSimpleName() + ")";
         }
 
+        String target = ok ? "SUPPORTED BUILD" : "UNSUPPORTED BUILD";
         statusView.setText(
-                (ok ? "✓ " : "✗ unsupported ") + dev + " · " + build + "\n"
-                        + "   kernel " + kernel + "\n"
+                target + "\n"
+                        + "Device   " + dev + "\n"
+                        + "Target   Xiaomi 17 Global / HyperOS 4.0.1.0\n"
+                        + "Kernel   " + kernel + "\n"
                         + shizuku);
     }
 

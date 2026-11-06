@@ -56,6 +56,16 @@ never re-run on the same boot after a park.
 Push to `main`; the workflow builds `app/build/outputs/apk/release/*.apk` and
 uploads it as the `PuddingRoot-apk` artifact.
 
+To publish an installable prerelease, create and push a version tag:
+
+```sh
+git tag v0.0.1-beta
+git push origin v0.0.1-beta
+```
+
+The tag workflow creates a GitHub prerelease with the APK attached. Future
+beta updates use the same pattern with a higher tag, such as `v0.0.2-beta`.
+
 Optional stable signing — add repository secrets:
 
 - `KEYSTORE_BASE64` — base64 of a JKS keystore
