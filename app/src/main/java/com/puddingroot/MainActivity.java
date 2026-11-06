@@ -9,6 +9,8 @@ import android.os.Looper;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -25,10 +27,28 @@ public class MainActivity extends Activity {
     private TextView statusView;
     private TextView logView;
     private Button rootBtn;
+    private Button shizukuBtn;
     private EditText pkgEdit;
+    private Spinner managerSpinner;
     private SharedPreferences prefs;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private volatile boolean running = false;
+
+    private static final String CURRENT_SPOOF = "kqvdie.zeykvw.hpbcyd";
+    private static final String[] MANAGER_LABELS = {
+            "KernelSU Next (spoofed)",
+            "KernelSU (stock)",
+            "KernelSU Next (stock)",
+            "SukiSU Ultra",
+            "Custom package"
+    };
+    private static final String[] MANAGER_PACKAGES = {
+            CURRENT_SPOOF,
+            "me.weishu.kernelsu",
+            "com.rifsxd.ksunext",
+            "com.sukisu.ultra",
+            ""
+    };
 
     private final Shizuku.OnRequestPermissionResultListener permListener =
             (requestCode, grantResult) -> ui.post(this::refreshStatus);
@@ -40,14 +60,35 @@ public class MainActivity extends Activity {
         statusView = findViewById(R.id.status);
         logView = findViewById(R.id.log);
         rootBtn = findViewById(R.id.root);
+        shizukuBtn = findViewById(R.id.shizuku);
         pkgEdit = findViewById(R.id.pkg);
+        managerSpinner = findViewById(R.id.manager_spinner);
         logView.setMovementMethod(new ScrollingMovementMethod());
 
         prefs = getSharedPreferences("cfg", MODE_PRIVATE);
-        pkgEdit.setText(prefs.getString("ksu_pkg", "me.weishu.kernelsu"));
+        ArrayAdapter<String> managerAdapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_dropdown_item, MANAGER_LABELS);
+        managerSpinner.setAdapter(managerAdapter);
+        selectManager(prefs.getString("ksu_pkg", detectManagerPackage()));
+        managerSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view,
+                                       int position, long id) {
+                boolean custom = position == MANAGER_PACKAGES.length - 1;
+                pkgEdit.setEnabled(custom);
+                if (!custom) {
+                    pkgEdit.setText(MANAGER_PACKAGES[position]);
+                }
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            }
+        });
 
         Shizuku.addRequestPermissionResultListener(permListener);
         rootBtn.setOnClickListener(v -> startRoot());
+        shizukuBtn.setOnClickListener(v -> requestShizuku());
 
         refreshStatus();
         if (!deviceSupported()) {
@@ -99,13 +140,15 @@ public class MainActivity extends Activity {
         boolean ok = deviceSupported();
 
         String shizuku;
+        boolean shizukuReady = false;
         try {
             if (!Shizuku.pingBinder()) {
                 shizuku = "Shizuku: not running (open Shizuku, then return here)";
             } else if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
                 shizuku = "Shizuku: ready";
+                shizukuReady = true;
             } else {
-                shizuku = "Shizuku: permission not granted (tap Root to request)";
+                shizuku = "Shizuku: permission not granted (tap Request Access)";
             }
         } catch (Throwable t) {
             shizuku = "Shizuku: unavailable (" + t.getClass().getSimpleName() + ")";
@@ -118,6 +161,64 @@ public class MainActivity extends Activity {
                         + "Target   Xiaomi 17 Global / HyperOS 4.0.1.0\n"
                         + "Kernel   " + kernel + "\n"
                         + shizuku);
+        shizukuBtn.setText(shizukuReady ? "SHIZUKU ACCESS GRANTED" : "REQUEST SHIZUKU ACCESS");
+        rootBtn.setEnabled(ok && shizukuReady && !running);
+    }
+
+    private boolean packageInstalled(String packageName) {
+        try {
+            getPackageManager().getApplicationInfo(packageName, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException ignored) {
+            return false;
+        }
+    }
+
+    private String detectManagerPackage() {
+        for (String packageName : MANAGER_PACKAGES) {
+            if (!packageName.isEmpty() && packageInstalled(packageName)) {
+                return packageName;
+            }
+        }
+        return CURRENT_SPOOF;
+    }
+
+    private void selectManager(String packageName) {
+        for (int i = 0; i < MANAGER_PACKAGES.length - 1; i++) {
+            if (MANAGER_PACKAGES[i].equals(packageName)) {
+                managerSpinner.setSelection(i);
+                pkgEdit.setEnabled(false);
+                pkgEdit.setText(packageName);
+                return;
+            }
+        }
+        managerSpinner.setSelection(MANAGER_PACKAGES.length - 1);
+        pkgEdit.setEnabled(true);
+        pkgEdit.setText(packageName);
+    }
+
+    private void requestShizuku() {
+        try {
+            if (!Shizuku.pingBinder()) {
+                toast("Start Shizuku first, then return here");
+                try {
+                    android.content.Intent intent = getPackageManager().getLaunchIntentForPackage(
+                            "moe.shizuku.privileged.api");
+                    if (intent != null) {
+                        startActivity(intent);
+                    }
+                } catch (Throwable ignored) {
+                }
+                return;
+            }
+            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                Shizuku.requestPermission(0);
+            } else {
+                toast("Shizuku access is already granted");
+            }
+        } catch (Throwable t) {
+            toast("Shizuku error: " + t.getClass().getSimpleName());
+        }
     }
 
     private void startRoot() {
@@ -129,13 +230,9 @@ public class MainActivity extends Activity {
             return;
         }
         try {
-            if (!Shizuku.pingBinder()) {
-                toast("Start Shizuku first");
-                return;
-            }
-            if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                Shizuku.requestPermission(0);
-                toast("Grant Shizuku permission, then tap Root again");
+            if (!Shizuku.pingBinder()
+                    || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                toast("Grant Shizuku access first");
                 return;
             }
         } catch (Throwable t) {
