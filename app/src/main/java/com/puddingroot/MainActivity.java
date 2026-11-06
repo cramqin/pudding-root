@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.ArrayList;
 
 import rikka.shizuku.Shizuku;
 
@@ -35,20 +36,8 @@ public class MainActivity extends Activity {
     private volatile boolean running = false;
 
     private static final String CURRENT_SPOOF = "kqvdie.zeykvw.hpbcyd";
-    private static final String[] MANAGER_LABELS = {
-            "KernelSU Next (spoofed)",
-            "KernelSU (stock)",
-            "KernelSU Next (stock)",
-            "SukiSU Ultra",
-            "Custom package"
-    };
-    private static final String[] MANAGER_PACKAGES = {
-            CURRENT_SPOOF,
-            "me.weishu.kernelsu",
-            "com.rifsxd.ksunext",
-            "com.sukisu.ultra",
-            ""
-    };
+    private String[] managerLabels = new String[0];
+    private String[] managerPackages = new String[0];
 
     private final Shizuku.OnRequestPermissionResultListener permListener =
             (requestCode, grantResult) -> ui.post(this::refreshStatus);
@@ -66,18 +55,19 @@ public class MainActivity extends Activity {
         logView.setMovementMethod(new ScrollingMovementMethod());
 
         prefs = getSharedPreferences("cfg", MODE_PRIVATE);
+        setupManagerChoices();
         ArrayAdapter<String> managerAdapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_dropdown_item, MANAGER_LABELS);
+                this, android.R.layout.simple_spinner_dropdown_item, managerLabels);
         managerSpinner.setAdapter(managerAdapter);
         selectManager(prefs.getString("ksu_pkg", detectManagerPackage()));
         managerSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, android.view.View view,
                                        int position, long id) {
-                boolean custom = position == MANAGER_PACKAGES.length - 1;
+                boolean custom = position == managerPackages.length - 1;
                 pkgEdit.setEnabled(custom);
                 if (!custom) {
-                    pkgEdit.setText(MANAGER_PACKAGES[position]);
+                    pkgEdit.setText(managerPackages[position]);
                 }
             }
 
@@ -174,8 +164,29 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void setupManagerChoices() {
+        ArrayList<String> labels = new ArrayList<>();
+        ArrayList<String> packages = new ArrayList<>();
+        addManagerIfInstalled(labels, packages, CURRENT_SPOOF, "KernelSU Next (spoofed)");
+        addManagerIfInstalled(labels, packages, "me.weishu.kernelsu", "KernelSU (stock)");
+        addManagerIfInstalled(labels, packages, "com.rifsxd.ksunext", "KernelSU Next (stock)");
+        addManagerIfInstalled(labels, packages, "com.sukisu.ultra", "SukiSU Ultra");
+        labels.add("Custom package");
+        packages.add("");
+        managerLabels = labels.toArray(new String[0]);
+        managerPackages = packages.toArray(new String[0]);
+    }
+
+    private void addManagerIfInstalled(ArrayList<String> labels, ArrayList<String> packages,
+                                       String packageName, String label) {
+        if (packageInstalled(packageName)) {
+            labels.add(label);
+            packages.add(packageName);
+        }
+    }
+
     private String detectManagerPackage() {
-        for (String packageName : MANAGER_PACKAGES) {
+        for (String packageName : managerPackages) {
             if (!packageName.isEmpty() && packageInstalled(packageName)) {
                 return packageName;
             }
@@ -184,15 +195,15 @@ public class MainActivity extends Activity {
     }
 
     private void selectManager(String packageName) {
-        for (int i = 0; i < MANAGER_PACKAGES.length - 1; i++) {
-            if (MANAGER_PACKAGES[i].equals(packageName)) {
+        for (int i = 0; i < managerPackages.length - 1; i++) {
+            if (managerPackages[i].equals(packageName)) {
                 managerSpinner.setSelection(i);
                 pkgEdit.setEnabled(false);
                 pkgEdit.setText(packageName);
                 return;
             }
         }
-        managerSpinner.setSelection(MANAGER_PACKAGES.length - 1);
+        managerSpinner.setSelection(managerPackages.length - 1);
         pkgEdit.setEnabled(true);
         pkgEdit.setText(packageName);
     }
