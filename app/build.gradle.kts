@@ -69,4 +69,5 @@ android {
 dependencies {
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
+    implementation("androidx.work:work-runtime:2.9.1")
 }

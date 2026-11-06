@@ -1,15 +1,18 @@
 package com.puddingroot;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
@@ -35,6 +38,7 @@ public class MainActivity extends Activity {
     private Button rebootBtn;
     private EditText pkgEdit;
     private Spinner managerSpinner;
+    private CheckBox autoRootBox;
     private SharedPreferences prefs;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private volatile boolean running = false;
@@ -58,9 +62,19 @@ public class MainActivity extends Activity {
         rebootBtn = findViewById(R.id.reboot);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
+        autoRootBox = findViewById(R.id.auto_root);
         logView.setMovementMethod(new ScrollingMovementMethod());
 
         prefs = getSharedPreferences("cfg", MODE_PRIVATE);
+        autoRootBox.setChecked(prefs.getBoolean("auto_root", false));
+        autoRootBox.setOnCheckedChangeListener((cb, checked) ->
+                prefs.edit().putBoolean("auto_root", checked).apply());
+        Notifier.ensureChannel(this);
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 1);
+        }
         setupManagerChoices();
         ArrayAdapter<String> managerAdapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_dropdown_item, managerLabels);
@@ -285,6 +299,10 @@ public class MainActivity extends Activity {
 
             @Override
             public void onDone(boolean ok, String summary) {
+                Notifier.notify(MainActivity.this,
+                        ok ? "PuddingRoot: rooted" : "PuddingRoot: failed",
+                        ok ? summary : summary + " Reboot and retry.",
+                        Notifier.ID_AUTO);
                 ui.post(() -> {
                     appendLog(summary);
                     running = false;
@@ -313,11 +331,27 @@ public class MainActivity extends Activity {
                 toast("Grant Shizuku access first");
                 return;
             }
-            toast("Rebooting…");
-            new Thread(() -> RootRunner.runShizukuCommand("svc power reboot")).start();
         } catch (Throwable t) {
-            toast("Reboot failed: " + t.getClass().getSimpleName());
+            toast("Shizuku error: " + t.getClass().getSimpleName());
+            return;
         }
+        toast("Rebooting…");
+        appendLog("--- reboot requested ---");
+        new Thread(() -> {
+            String out = RootRunner.runShizukuCommand(
+                    "svc power reboot 2>&1 || setprop sys.powerctl reboot 2>&1");
+            String o = out == null ? "" : out.trim();
+            ui.post(() -> {
+                if (!o.isEmpty()) {
+                    appendLog(o);
+                }
+                if (o.contains("SecurityException") || o.contains("denied")
+                        || o.contains("Permission") || o.contains("not permitted")) {
+                    appendLog("Reboot blocked by this ROM (no shell permission). Reboot manually.");
+                    toast("Reboot blocked — reboot manually");
+                }
+            });
+        }).start();
     }
 
     private void toast(String s) {
