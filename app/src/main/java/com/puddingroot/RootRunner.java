@@ -59,6 +59,10 @@ public class RootRunner implements Runnable {
         }
     }
 
+    public static String runShizukuCommand(String command) {
+        return sh(command);
+    }
+
     @Override
     public void run() {
         try {

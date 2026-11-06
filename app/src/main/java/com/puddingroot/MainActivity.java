@@ -1,6 +1,8 @@
 package com.puddingroot;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -29,6 +31,8 @@ public class MainActivity extends Activity {
     private TextView logView;
     private Button rootBtn;
     private Button shizukuBtn;
+    private Button copyLogBtn;
+    private Button rebootBtn;
     private EditText pkgEdit;
     private Spinner managerSpinner;
     private SharedPreferences prefs;
@@ -50,6 +54,8 @@ public class MainActivity extends Activity {
         logView = findViewById(R.id.log);
         rootBtn = findViewById(R.id.root);
         shizukuBtn = findViewById(R.id.shizuku);
+        copyLogBtn = findViewById(R.id.copy_log);
+        rebootBtn = findViewById(R.id.reboot);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
         logView.setMovementMethod(new ScrollingMovementMethod());
@@ -79,6 +85,8 @@ public class MainActivity extends Activity {
         Shizuku.addRequestPermissionResultListener(permListener);
         rootBtn.setOnClickListener(v -> startRoot());
         shizukuBtn.setOnClickListener(v -> requestShizuku());
+        copyLogBtn.setOnClickListener(v -> copyLog());
+        rebootBtn.setOnClickListener(v -> rebootDevice());
 
         refreshStatus();
         if (!deviceSupported()) {
@@ -92,6 +100,8 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         refreshStatus();
+        ui.postDelayed(this::refreshStatus, 500);
+        ui.postDelayed(this::refreshStatus, 1500);
     }
 
     @Override
@@ -153,6 +163,8 @@ public class MainActivity extends Activity {
                         + shizuku);
         shizukuBtn.setText(shizukuReady ? "SHIZUKU ACCESS GRANTED" : "REQUEST SHIZUKU ACCESS");
         rootBtn.setEnabled(ok && shizukuReady && !running);
+        rebootBtn.setEnabled(shizukuReady && !running);
+        copyLogBtn.setEnabled(logView.length() > 0);
     }
 
     private boolean packageInstalled(String packageName) {
@@ -224,8 +236,11 @@ public class MainActivity extends Activity {
             }
             if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
                 Shizuku.requestPermission(0);
+                ui.postDelayed(this::refreshStatus, 500);
+                ui.postDelayed(this::refreshStatus, 1500);
             } else {
                 toast("Shizuku access is already granted");
+                refreshStatus();
             }
         } catch (Throwable t) {
             toast("Shizuku error: " + t.getClass().getSimpleName());
@@ -282,6 +297,27 @@ public class MainActivity extends Activity {
 
     private void appendLog(String s) {
         logView.append(s + "\n");
+        copyLogBtn.setEnabled(logView.length() > 0);
+    }
+
+    private void copyLog() {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        clipboard.setPrimaryClip(ClipData.newPlainText("PuddingRoot log", logView.getText()));
+        toast("Log copied");
+    }
+
+    private void rebootDevice() {
+        try {
+            if (!Shizuku.pingBinder()
+                    || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                toast("Grant Shizuku access first");
+                return;
+            }
+            toast("Rebooting…");
+            new Thread(() -> RootRunner.runShizukuCommand("svc power reboot")).start();
+        } catch (Throwable t) {
+            toast("Reboot failed: " + t.getClass().getSimpleName());
+        }
     }
 
     private void toast(String s) {
