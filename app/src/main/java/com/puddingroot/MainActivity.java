@@ -375,11 +375,11 @@ public class MainActivity extends Activity {
                 packages.add(p);
             }
         }
+        appendLog("managers detected: " + packages);
         labels.add("Custom package");
         packages.add("");
         managerLabels = labels.toArray(new String[0]);
         managerPackages = packages.toArray(new String[0]);
-        appendLog("managers detected: " + packages);
     }
 
     private java.util.Set<String> installedPackages() {
@@ -473,6 +473,21 @@ public class MainActivity extends Activity {
         if (running) {
             return;
         }
+        String pkg = pkgEdit.getText().toString().trim();
+        if (pkg.isEmpty()) {
+            toast("Select or enter a KernelSU manager package first");
+            return;
+        }
+        if (!packageInstalled(pkg)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Manager not installed")
+                    .setMessage("'" + pkg + "' is not installed. Install a KernelSU-family "
+                            + "manager (KernelSU / KernelSU-Next / SukiSU / ReSukiSU) first, "
+                            + "or pick the right one above.")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
         try {
             if (!Shizuku.pingBinder()
                     || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
@@ -484,10 +499,6 @@ public class MainActivity extends Activity {
             return;
         }
 
-        String pkg = pkgEdit.getText().toString().trim();
-        if (pkg.isEmpty()) {
-            pkg = "me.weishu.kernelsu";
-        }
         prefs.edit().putString("ksu_pkg", pkg).apply();
 
         running = true;
