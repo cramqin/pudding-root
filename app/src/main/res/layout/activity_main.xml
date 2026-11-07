@@ -164,6 +164,19 @@
                 android:textAllCaps="false"
                 android:textColor="#E8EDF4"
                 android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/soft_boot"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:backgroundTint="#293240"
+                android:tooltipText="Restart the Android framework without losing the loaded KernelSU module."
+                android:text="SOFT BOOT"
+                android:textAllCaps="false"
+                android:textColor="#E8EDF4"
+                android:textSize="11sp" />
         </LinearLayout>
 
         <TextView

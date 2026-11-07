@@ -38,11 +38,13 @@ public class MainActivity extends Activity {
     private Button shizukuBtn;
     private Button copyLogBtn;
     private Button rebootBtn;
+    private Button softBootBtn;
     private EditText pkgEdit;
     private Spinner managerSpinner;
     private SharedPreferences prefs;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private volatile boolean running = false;
+    private volatile boolean rooted = false;
 
     private static final String CURRENT_SPOOF = "kqvdie.zeykvw.hpbcyd";
     private String[] managerLabels = new String[0];
@@ -61,6 +63,7 @@ public class MainActivity extends Activity {
         shizukuBtn = findViewById(R.id.shizuku);
         copyLogBtn = findViewById(R.id.copy_log);
         rebootBtn = findViewById(R.id.reboot);
+        softBootBtn = findViewById(R.id.soft_boot);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
         logView.setMovementMethod(new ScrollingMovementMethod());
@@ -98,13 +101,12 @@ public class MainActivity extends Activity {
         shizukuBtn.setOnClickListener(v -> requestShizuku());
         copyLogBtn.setOnClickListener(v -> copyLog());
         rebootBtn.setOnClickListener(v -> rebootDevice());
+        softBootBtn.setOnClickListener(v -> softRebootDevice());
 
         refreshStatus();
-        if (!deviceSupported()) {
-            rootBtn.setEnabled(false);
-            appendLog("Unsupported device/kernel. This build only targets Xiaomi 17 Global "
-                    + "(pudding) on kernel " + EXPECT_KERNEL_PREFIX + "…");
-            appendLog("detected=" + java.util.Arrays.toString(kernelCandidates()));
+        if (deviceStatus() != 0) {
+            appendLog("Note: this build is not verified (target: pudding 4.0.1.0). "
+                    + "Running may fail or crash the kernel — proceed at your own risk.");
         }
     }
 
@@ -166,19 +168,23 @@ public class MainActivity extends Activity {
         return "?";
     }
 
-    private boolean deviceSupported() {
-        // The build id (ro.build.*) is fixed at boot and is not spoofed by
-        // KernelSU, unlike uname/os.version which jailbreak mode rewrites.
+    /** 0 = verified build, 1 = experimental (pudding/HyperOS 4), 2 = unsupported. */
+    private int deviceStatus() {
         if (isPuddingBuild()) {
-            return true;
+            return 0;
         }
-        // Fresh boot (KSU not loaded yet): the kernel string is real and matches.
-        for (String v : kernelCandidates()) {
-            if (v != null && v.trim().startsWith(EXPECT_KERNEL_PREFIX)) {
-                return true;
-            }
+        if (isPuddingFamily()) {
+            return 1;
         }
-        return false;
+        return 2;
+    }
+
+    private boolean isPuddingFamily() {
+        boolean deviceOk = Build.DEVICE != null
+                && Build.DEVICE.toLowerCase().contains("pudding");
+        String buildId = (Build.ID != null && !Build.ID.isEmpty()) ? Build.ID : Build.DISPLAY;
+        boolean hyperOs4 = buildId != null && buildId.startsWith("OS4");
+        return deviceOk && hyperOs4;
     }
 
     private boolean isPuddingBuild() {
@@ -204,7 +210,7 @@ public class MainActivity extends Activity {
         String dev = android.os.Build.DEVICE;
         String build = android.os.Build.DISPLAY;
         String kernel = kernelVersion();
-        boolean ok = deviceSupported();
+        int st = deviceStatus();
 
         String shizuku;
         boolean shizukuReady = false;
@@ -221,16 +227,20 @@ public class MainActivity extends Activity {
             shizuku = "Shizuku: unavailable (" + t.getClass().getSimpleName() + ")";
         }
 
-        String target = ok ? "SUPPORTED BUILD" : "UNSUPPORTED BUILD";
+        String target = st == 0 ? "VERIFIED BUILD (4.0.1.0)"
+                : st == 1 ? "EXPERIMENTAL (unverified build)"
+                : "UNSUPPORTED (not Xiaomi 17 / HyperOS 4)";
         statusView.setText(
                 target + "\n"
                         + "Device   " + dev + "\n"
-                        + "Target   Xiaomi 17 Global / HyperOS 4.0.1.0\n"
+                        + "Target   Xiaomi 17 / HyperOS 4\n"
+                        + "Build    " + build + "\n"
                         + "Kernel   " + kernel + "\n"
                         + shizuku);
         shizukuBtn.setText(shizukuReady ? "SHIZUKU ACCESS GRANTED" : "REQUEST SHIZUKU ACCESS");
-        rootBtn.setEnabled(ok && shizukuReady && !running);
+        rootBtn.setEnabled(shizukuReady && !running);
         rebootBtn.setEnabled(shizukuReady && !running);
+        softBootBtn.setEnabled(rooted && !running);
         copyLogBtn.setEnabled(logView.length() > 0);
     }
 
@@ -319,10 +329,6 @@ public class MainActivity extends Activity {
         if (running) {
             return;
         }
-        if (!deviceSupported()) {
-            toast("Unsupported device/kernel");
-            return;
-        }
         try {
             if (!Shizuku.pingBinder()
                     || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
@@ -359,6 +365,9 @@ public class MainActivity extends Activity {
                         Notifier.ID_AUTO);
                 ui.post(() -> {
                     appendLog(summary);
+                    if (ok) {
+                        rooted = true;
+                    }
                     running = false;
                     rootBtn.setEnabled(true);
                     refreshStatus();
@@ -381,6 +390,34 @@ public class MainActivity extends Activity {
     private void rebootDevice() {
         issuePowerCommand("svc power reboot 2>&1 || setprop sys.powerctl reboot 2>&1",
                 "Reboot", "Rebooting…", "reboot");
+    }
+
+    private void softRebootDevice() {
+        if (!rooted) {
+            toast("Root first, then soft reboot");
+            return;
+        }
+        try {
+            if (!Shizuku.pingBinder()
+                    || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                toast("Grant Shizuku access first");
+                return;
+            }
+        } catch (Throwable t) {
+            toast("Shizuku error: " + t.getClass().getSimpleName());
+            return;
+        }
+        toast("Soft rebooting…");
+        appendLog("--- soft reboot requested ---");
+        new Thread(() -> {
+            String out = RootRunner.runShizukuCommand("su -c 'stop; sleep 2; start' 2>&1");
+            String o = out == null ? "" : out.trim();
+            ui.post(() -> {
+                if (!o.isEmpty()) {
+                    appendLog(o);
+                }
+            });
+        }).start();
     }
 
     private void issuePowerCommand(String command, String action, String toastMsg, String logLabel) {
