@@ -46,6 +46,8 @@ public class MainActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private volatile boolean running = false;
     private volatile boolean rooted = false;
+    private volatile boolean rootChecked = false;
+    private volatile boolean rootChecking = false;
 
     private static final String CURRENT_SPOOF = "kqvdie.zeykvw.hpbcyd";
     private String[] managerLabels = new String[0];
@@ -116,6 +118,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         refreshStatus();
+        checkRootedAsync();
         ui.postDelayed(this::refreshStatus, 500);
         ui.postDelayed(this::refreshStatus, 1500);
     }
@@ -230,7 +233,7 @@ public class MainActivity extends Activity {
         return Build.DISPLAY != null ? Build.DISPLAY : "?";
     }
 
-    /** True if a KernelSU-family module is currently loaded (jailbreak mode). */
+    /** Fast app-side check; may be hidden by KernelSU's hide features. */
     private boolean isKsuLoaded() {
         try (BufferedReader r = new BufferedReader(new FileReader("/proc/modules"))) {
             String line;
@@ -242,6 +245,52 @@ public class MainActivity extends Activity {
         } catch (Throwable ignored) {
         }
         return false;
+    }
+
+    /**
+     * Reliable root detection through Shizuku: KSU hide features filter
+     * /proc/modules for apps, but a shell-issued {@code su -c id} still tells
+     * the truth. Runs off the UI thread.
+     */
+    private boolean detectRooted() {
+        if (isKsuLoaded()) {
+            return true;
+        }
+        try {
+            if (!Shizuku.pingBinder()
+                    || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+            String out = RootRunner.runShizukuCommand("su -c id 2>&1");
+            if (out != null && out.contains("uid=0")) {
+                return true;
+            }
+            out = RootRunner.runShizukuCommand("/data/adb/ksu/bin/su -c id 2>&1");
+            if (out != null && out.contains("uid=0")) {
+                return true;
+            }
+            String mods = RootRunner.runShizukuCommand(
+                    "grep -i -E 'kernelsu|sukisu' /proc/modules 2>&1");
+            return mods != null && (mods.contains("kernelsu") || mods.contains("sukisu"));
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    private void checkRootedAsync() {
+        if (rootChecking || running) {
+            return;
+        }
+        rootChecking = true;
+        new Thread(() -> {
+            boolean r = detectRooted();
+            ui.post(() -> {
+                rooted = r;
+                rootChecked = true;
+                rootChecking = false;
+                refreshStatus();
+            });
+        }).start();
     }
 
     private void refreshStatus() {
@@ -271,8 +320,14 @@ public class MainActivity extends Activity {
         boolean ksuLoaded = isKsuLoaded();
         if (ksuLoaded) {
             rooted = true;
+            rootChecked = true;
         }
-        String rootState = ksuLoaded ? "ROOTED (KernelSU loaded)" : "not rooted";
+        String rootState;
+        if (!rootChecked) {
+            rootState = "root: checking…";
+        } else {
+            rootState = rooted ? "ROOTED (KernelSU loaded)" : "not rooted";
+        }
         statusView.setText(
                 target + "\n"
                         + "Device   " + dev + "\n"
@@ -373,7 +428,7 @@ public class MainActivity extends Activity {
         if (running) {
             return;
         }
-        if (isKsuLoaded()) {
+        if (rooted) {
             new AlertDialog.Builder(this)
                     .setTitle("Already rooted")
                     .setMessage("KernelSU is already loaded. Re-running the exploit is "
@@ -428,6 +483,7 @@ public class MainActivity extends Activity {
                     appendLog(summary);
                     if (ok) {
                         rooted = true;
+                        rootChecked = true;
                     }
                     running = false;
                     rootBtn.setEnabled(true);
