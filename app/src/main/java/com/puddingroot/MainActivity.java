@@ -2,6 +2,7 @@ package com.puddingroot;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.SharedPreferences;
@@ -189,8 +190,12 @@ public class MainActivity extends Activity {
         if (!isPuddingDevice()) {
             return false;
         }
-        String id = buildId();
-        return id.contains(EXPECT_BUILD) || id.contains("CNXM");
+        for (String s : buildSources()) {
+            if (s != null && (s.contains(EXPECT_BUILD) || s.contains("CNXM"))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isPuddingDevice() {
@@ -198,19 +203,50 @@ public class MainActivity extends Activity {
     }
 
     private boolean isHyperOs4() {
-        return buildId().startsWith("OS4");
+        for (String s : buildSources()) {
+            if (s != null && s.startsWith("OS4")) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    private String buildId() {
-        if (Build.ID != null && !Build.ID.isEmpty()) {
-            return Build.ID;
+    private String[] buildSources() {
+        return new String[]{
+                Build.DISPLAY,
+                Build.ID,
+                Build.FINGERPRINT,
+                Build.VERSION.INCREMENTAL,
+        };
+    }
+
+    /** The Xiaomi/HyperOS build string for display (prefer one containing "OS"). */
+    private String xiaomiBuild() {
+        for (String s : buildSources()) {
+            if (s != null && (s.contains("OS4") || s.contains("XM"))) {
+                return s;
+            }
         }
-        return Build.DISPLAY != null ? Build.DISPLAY : "";
+        return Build.DISPLAY != null ? Build.DISPLAY : "?";
+    }
+
+    /** True if a KernelSU-family module is currently loaded (jailbreak mode). */
+    private boolean isKsuLoaded() {
+        try (BufferedReader r = new BufferedReader(new FileReader("/proc/modules"))) {
+            String line;
+            while ((line = r.readLine()) != null) {
+                if (line.contains("kernelsu") || line.contains("sukisu")) {
+                    return true;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
     }
 
     private void refreshStatus() {
         String dev = android.os.Build.DEVICE;
-        String build = android.os.Build.DISPLAY;
+        String build = xiaomiBuild();
         String kernel = kernelVersion();
         int st = deviceStatus();
 
@@ -232,12 +268,18 @@ public class MainActivity extends Activity {
         String target = st == 0 ? "VERIFIED BUILD (global / CN)"
                 : st == 1 ? "EXPERIMENTAL (unverified build)"
                 : "UNSUPPORTED (not Xiaomi 17 / HyperOS 4)";
+        boolean ksuLoaded = isKsuLoaded();
+        if (ksuLoaded) {
+            rooted = true;
+        }
+        String rootState = ksuLoaded ? "ROOTED (KernelSU loaded)" : "not rooted";
         statusView.setText(
                 target + "\n"
                         + "Device   " + dev + "\n"
                         + "Target   Xiaomi 17 / HyperOS 4\n"
                         + "Build    " + build + "\n"
                         + "Kernel   " + kernel + "\n"
+                        + rootState + "\n"
                         + shizuku);
         shizukuBtn.setText(shizukuReady ? "SHIZUKU ACCESS GRANTED" : "REQUEST SHIZUKU ACCESS");
         rootBtn.setEnabled(shizukuReady && !running);
@@ -328,6 +370,23 @@ public class MainActivity extends Activity {
     }
 
     private void startRoot() {
+        if (running) {
+            return;
+        }
+        if (isKsuLoaded()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Already rooted")
+                    .setMessage("KernelSU is already loaded. Re-running the exploit is "
+                            + "usually unnecessary and can crash the kernel. Continue anyway?")
+                    .setPositiveButton("Continue", (d, w) -> runRoot())
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            return;
+        }
+        runRoot();
+    }
+
+    private void runRoot() {
         if (running) {
             return;
         }
