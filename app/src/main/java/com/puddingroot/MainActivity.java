@@ -20,6 +20,7 @@ import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 import rikka.shizuku.Shizuku;
@@ -101,6 +102,7 @@ public class MainActivity extends Activity {
             rootBtn.setEnabled(false);
             appendLog("Unsupported device/kernel. This build only targets Xiaomi 17 Global "
                     + "(pudding) on kernel " + EXPECT_KERNEL_PREFIX + "…");
+            appendLog("detected=" + java.util.Arrays.toString(kernelCandidates()));
         }
     }
 
@@ -118,27 +120,57 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    private String kernelVersion() {
-        String v = System.getProperty("os.version", "");
-        if (v == null || v.isEmpty()) {
-            // Fallback: /proc/version is "Linux version <release> (...)".
-            try (BufferedReader r = new BufferedReader(new FileReader("/proc/version"))) {
-                String line = r.readLine();
-                if (line != null) {
-                    String[] parts = line.trim().split("\\s+");
-                    if (parts.length >= 3) {
-                        v = parts[2];
-                    }
+    /** Boot-time kernel release from the read-only property (KSU can't spoof it). */
+    private String readSystemProperty(String key) {
+        try {
+            Class<?> cls = Class.forName("android.os.SystemProperties");
+            Method get = cls.getMethod("get", String.class);
+            Object result = get.invoke(null, key);
+            return result == null ? null : result.toString();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /** Kernel release from /proc/version ("Linux version <release> (...)" ). */
+    private String readProcVersion() {
+        try (BufferedReader r = new BufferedReader(new FileReader("/proc/version"))) {
+            String line = r.readLine();
+            if (line != null) {
+                String[] parts = line.trim().split("\\s+");
+                if (parts.length >= 3) {
+                    return parts[2];
                 }
-            } catch (Throwable ignored) {
-                // keep whatever os.version gave us
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    private String[] kernelCandidates() {
+        return new String[]{
+                readSystemProperty("ro.kernel.version"),
+                System.getProperty("os.version", ""),
+                readProcVersion(),
+        };
+    }
+
+    private String kernelVersion() {
+        for (String v : kernelCandidates()) {
+            if (v != null && !v.isEmpty()) {
+                return v.trim();
             }
         }
-        return (v == null || v.isEmpty()) ? "?" : v;
+        return "?";
     }
 
     private boolean deviceSupported() {
-        return kernelVersion().startsWith(EXPECT_KERNEL_PREFIX);
+        for (String v : kernelCandidates()) {
+            if (v != null && v.trim().startsWith(EXPECT_KERNEL_PREFIX)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void refreshStatus() {
