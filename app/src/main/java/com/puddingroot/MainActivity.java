@@ -341,8 +341,9 @@ public class MainActivity extends Activity {
                         + rootState + "\n"
                         + shizuku);
         shizukuBtn.setText(shizukuReady ? "SHIZUKU ACCESS GRANTED" : "REQUEST SHIZUKU ACCESS");
+        rootBtn.setText(running ? "RUNNING… (reboot if stuck)" : "ROOT THIS BOOT");
         rootBtn.setEnabled(shizukuReady && !running);
-        rebootBtn.setEnabled(shizukuReady && !running);
+        rebootBtn.setEnabled(shizukuReady);
         softBootBtn.setVisibility(rooted ? android.view.View.VISIBLE : android.view.View.GONE);
         softBootBtn.setEnabled(rooted && !running);
         copyLogBtn.setEnabled(logView.length() > 0);
@@ -503,6 +504,7 @@ public class MainActivity extends Activity {
 
         running = true;
         rootBtn.setEnabled(false);
+        rootBtn.setText("RUNNING… (reboot if stuck)");
         appendLog("=== starting · KSU package: " + pkg + " ===");
 
         final String finalPkg = pkg;
