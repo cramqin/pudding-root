@@ -555,8 +555,12 @@ public class MainActivity extends Activity {
     }
 
     private void shutdownDevice() {
+        // HyperOS maps `svc power shutdown` to a quick shutdown that reboots
+        // right after turning off. Use the raw init power-off instead (like the
+        // power button); it needs root, so try setprop first, then reboot -p.
         issuePowerCommand(
-                "svc power shutdown 2>&1 || /system/bin/su -c 'setprop sys.powerctl shutdown' 2>&1",
+                "/system/bin/su -c 'setprop sys.powerctl shutdown' 2>&1 "
+                        + "|| /system/bin/su -c 'reboot -p' 2>&1",
                 "Shutdown", "Shutting down…", "shutdown");
     }
 
@@ -606,9 +610,11 @@ public class MainActivity extends Activity {
                     appendLog(o);
                 }
                 if (o.contains("SecurityException") || o.contains("denied")
-                        || o.contains("Permission") || o.contains("not permitted")) {
-                    appendLog(action + " blocked by this ROM (no shell permission). Do it manually.");
-                    toast(action + " blocked — do it manually");
+                        || o.contains("Permission") || o.contains("not permitted")
+                        || o.contains("not found") || o.contains("No such file")) {
+                    appendLog(action + " didn't run (needs root or is blocked). "
+                            + "Do it manually or root first.");
+                    toast(action + " needs root / blocked — do it manually");
                 }
             });
         }).start();
