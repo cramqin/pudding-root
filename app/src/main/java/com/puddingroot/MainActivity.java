@@ -29,6 +29,8 @@ public class MainActivity extends Activity {
 
     /** Kernel prefix for the supported build (HyperOS 4.0.1.0.XPCMIXM.D01). */
     static final String EXPECT_KERNEL_PREFIX = "6.12.69-android16-6-g0a1dc0413ec7";
+    /** Build id is set at boot and is NOT spoofable by KernelSU. */
+    static final String EXPECT_BUILD = "4.0.1.0";
 
     private TextView statusView;
     private TextView logView;
@@ -165,12 +167,37 @@ public class MainActivity extends Activity {
     }
 
     private boolean deviceSupported() {
+        // The build id (ro.build.*) is fixed at boot and is not spoofed by
+        // KernelSU, unlike uname/os.version which jailbreak mode rewrites.
+        if (isPuddingBuild()) {
+            return true;
+        }
+        // Fresh boot (KSU not loaded yet): the kernel string is real and matches.
         for (String v : kernelCandidates()) {
             if (v != null && v.trim().startsWith(EXPECT_KERNEL_PREFIX)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private boolean isPuddingBuild() {
+        String dev = android.os.Build.DEVICE;
+        boolean deviceOk = dev != null && dev.contains("pudding");
+        String[] buildSources = {
+                android.os.Build.DISPLAY,
+                android.os.Build.ID,
+                android.os.Build.FINGERPRINT,
+                android.os.Build.VERSION.INCREMENTAL,
+        };
+        boolean buildOk = false;
+        for (String s : buildSources) {
+            if (s != null && s.contains(EXPECT_BUILD)) {
+                buildOk = true;
+                break;
+            }
+        }
+        return deviceOk && buildOk;
     }
 
     private void refreshStatus() {
