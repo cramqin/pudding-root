@@ -261,7 +261,11 @@ public class MainActivity extends Activity {
                     || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
                 return false;
             }
-            String out = RootRunner.runShizukuCommand("su -c id 2>&1");
+            String out = RootRunner.runShizukuCommand("/system/bin/su -c id 2>&1");
+            if (out != null && out.contains("uid=0")) {
+                return true;
+            }
+            out = RootRunner.runShizukuCommand("su -c id 2>&1");
             if (out != null && out.contains("uid=0")) {
                 return true;
             }
@@ -339,6 +343,7 @@ public class MainActivity extends Activity {
         shizukuBtn.setText(shizukuReady ? "SHIZUKU ACCESS GRANTED" : "REQUEST SHIZUKU ACCESS");
         rootBtn.setEnabled(shizukuReady && !running);
         rebootBtn.setEnabled(shizukuReady && !running);
+        softBootBtn.setVisibility(rooted ? android.view.View.VISIBLE : android.view.View.GONE);
         softBootBtn.setEnabled(rooted && !running);
         copyLogBtn.setEnabled(logView.length() > 0);
     }
@@ -527,7 +532,13 @@ public class MainActivity extends Activity {
         toast("Soft rebooting…");
         appendLog("--- soft reboot requested ---");
         new Thread(() -> {
-            String out = RootRunner.runShizukuCommand("su -c 'stop; sleep 2; start' 2>&1");
+            // Prefer /system/bin/su (bare `su` can be hijacked by
+            // /apex/com.android.virt/bin/su). Chain the known soft-reboot
+            // methods: userspace reboot, then restart zygote, then stop/start.
+            String inner = "svc power reboot userspace || setprop ctl.restart zygote "
+                    + "|| (stop; sleep 2; start)";
+            String out = RootRunner.runShizukuCommand(
+                    "/system/bin/su -c '" + inner + "' 2>&1 || su -c '" + inner + "' 2>&1");
             String o = out == null ? "" : out.trim();
             ui.post(() -> {
                 if (!o.isEmpty()) {

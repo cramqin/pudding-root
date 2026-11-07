@@ -133,6 +133,20 @@
             android:textSize="15sp"
             android:textStyle="bold" />
 
+        <Button
+            android:id="@+id/soft_boot"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_button"
+            android:tooltipText="Restart the Android framework without losing the loaded KernelSU module."
+            android:text="SOFT BOOT (keep root)"
+            android:textAllCaps="false"
+            android:textColor="#2C2418"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -156,24 +170,10 @@
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
                 android:layout_weight="1"
                 android:backgroundTint="#293240"
                 android:tooltipText="Power off, wait ~2 minutes, then turn on for the best success rate."
                 android:text="REBOOT"
-                android:textAllCaps="false"
-                android:textColor="#E8EDF4"
-                android:textSize="11sp" />
-
-            <Button
-                android:id="@+id/soft_boot"
-                android:layout_width="0dp"
-                android:layout_height="44dp"
-                android:layout_marginStart="4dp"
-                android:layout_weight="1"
-                android:backgroundTint="#293240"
-                android:tooltipText="Restart the Android framework without losing the loaded KernelSU module."
-                android:text="SOFT BOOT"
                 android:textAllCaps="false"
                 android:textColor="#E8EDF4"
                 android:textSize="11sp" />
