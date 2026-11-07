@@ -519,33 +519,24 @@ public class MainActivity extends Activity {
             toast("Root first, then soft reboot");
             return;
         }
+        // This ROM doesn't support userspace reboot, so hand off to the
+        // KernelSU manager, whose soft-reboot option is known to work.
+        String pkg = pkgEdit.getText().toString().trim();
+        if (pkg.isEmpty()) {
+            pkg = "me.weishu.kernelsu";
+        }
         try {
-            if (!Shizuku.pingBinder()
-                    || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                toast("Grant Shizuku access first");
-                return;
+            android.content.Intent intent = getPackageManager().getLaunchIntentForPackage(pkg);
+            if (intent != null) {
+                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                appendLog("opened manager (" + pkg + ") — use its soft reboot");
+            } else {
+                toast("Manager not found: " + pkg);
             }
         } catch (Throwable t) {
-            toast("Shizuku error: " + t.getClass().getSimpleName());
-            return;
+            toast("Can't open manager: " + t.getClass().getSimpleName());
         }
-        toast("Soft rebooting…");
-        appendLog("--- soft reboot requested ---");
-        new Thread(() -> {
-            // Prefer /system/bin/su (bare `su` can be hijacked by
-            // /apex/com.android.virt/bin/su). Chain the known soft-reboot
-            // methods: userspace reboot, then restart zygote, then stop/start.
-            String inner = "svc power reboot userspace || setprop ctl.restart zygote "
-                    + "|| (stop; sleep 2; start)";
-            String out = RootRunner.runShizukuCommand(
-                    "/system/bin/su -c '" + inner + "' 2>&1 || su -c '" + inner + "' 2>&1");
-            String o = out == null ? "" : out.trim();
-            ui.post(() -> {
-                if (!o.isEmpty()) {
-                    appendLog(o);
-                }
-            });
-        }).start();
     }
 
     private void issuePowerCommand(String command, String action, String toastMsg, String logLabel) {

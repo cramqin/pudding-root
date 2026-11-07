@@ -52,10 +52,10 @@ missed", **reboot the device** and tap Root again. Never kill a parked run and
 never re-run on the same boot after a park.
 
 After a successful run the exploit now **exits cleanly** (releases its spray
-memory) instead of parking. A **Soft boot** button then appears (only when
-rooted) — it restarts the Android framework while keeping the loaded KernelSU
-module, so root survives it. A full **Reboot** drops the LKM and you must
-re-root.
+memory) instead of parking. A **Soft reboot** button then appears (only when
+rooted) — it opens your KernelSU manager, which has a working soft-reboot option
+that restarts the framework while keeping the loaded LKM, so root survives it. A
+full **Reboot** drops the LKM and you must re-root.
 
 > Note: once KernelSU is loaded (jailbreak mode), it spoofs the kernel version
 > string; the app therefore identifies the device by its build ID, not `uname`.
