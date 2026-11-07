@@ -358,22 +358,45 @@ public class MainActivity extends Activity {
     }
 
     private void setupManagerChoices() {
+        java.util.Set<String> installed = installedPackages();
         ArrayList<String> labels = new ArrayList<>();
         ArrayList<String> packages = new ArrayList<>();
-        addManagerIfInstalled(labels, packages, CURRENT_SPOOF, "KernelSU Next (spoofed)");
-        addManagerIfInstalled(labels, packages, "me.weishu.kernelsu", "KernelSU (stock)");
-        addManagerIfInstalled(labels, packages, "com.rifsxd.ksunext", "KernelSU Next (stock)");
-        addManagerIfInstalled(labels, packages, "com.sukisu.ultra", "SukiSU Ultra");
-        addManagerIfInstalled(labels, packages, "com.resukisu.resukisu", "ReSukiSU");
+        addManagerIfInstalled(labels, packages, installed, CURRENT_SPOOF, "KernelSU Next (spoofed)");
+        addManagerIfInstalled(labels, packages, installed, "me.weishu.kernelsu", "KernelSU (stock)");
+        addManagerIfInstalled(labels, packages, installed, "com.rifsxd.ksunext", "KernelSU Next (stock)");
+        addManagerIfInstalled(labels, packages, installed, "com.sukisu.ultra", "SukiSU Ultra");
+        addManagerIfInstalled(labels, packages, installed, "com.resukisu.resukisu", "ReSukiSU");
+        // Any other installed package whose name looks like a KSU manager.
+        for (String p : installed) {
+            String low = p.toLowerCase();
+            if ((low.contains("kernelsu") || low.contains("sukisu") || low.contains("ksunext"))
+                    && !packages.contains(p)) {
+                labels.add(p);
+                packages.add(p);
+            }
+        }
         labels.add("Custom package");
         packages.add("");
         managerLabels = labels.toArray(new String[0]);
         managerPackages = packages.toArray(new String[0]);
+        appendLog("managers detected: " + packages);
+    }
+
+    private java.util.Set<String> installedPackages() {
+        java.util.Set<String> set = new java.util.HashSet<>();
+        try {
+            for (android.content.pm.PackageInfo pi : getPackageManager().getInstalledPackages(0)) {
+                set.add(pi.packageName);
+            }
+        } catch (Throwable ignored) {
+        }
+        return set;
     }
 
     private void addManagerIfInstalled(ArrayList<String> labels, ArrayList<String> packages,
+                                       java.util.Set<String> installed,
                                        String packageName, String label) {
-        if (packageInstalled(packageName)) {
+        if (installed.contains(packageName)) {
             labels.add(label);
             packages.add(packageName);
         }
