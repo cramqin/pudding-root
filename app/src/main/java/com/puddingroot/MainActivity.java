@@ -105,8 +105,9 @@ public class MainActivity extends Activity {
 
         refreshStatus();
         if (deviceStatus() != 0) {
-            appendLog("Note: this build is not verified (target: pudding 4.0.1.0). "
-                    + "Running may fail or crash the kernel — proceed at your own risk.");
+            appendLog("Note: this build is not verified (target: pudding HyperOS 4, "
+                    + "global 4.0.1.0 / CN). Running may fail or crash the kernel — "
+                    + "proceed at your own risk.");
         }
     }
 
@@ -170,7 +171,7 @@ public class MainActivity extends Activity {
 
     /** 0 = verified build, 1 = experimental (pudding/HyperOS 4), 2 = unsupported. */
     private int deviceStatus() {
-        if (isPuddingBuild()) {
+        if (isVerifiedBuild()) {
             return 0;
         }
         if (isPuddingFamily()) {
@@ -180,30 +181,31 @@ public class MainActivity extends Activity {
     }
 
     private boolean isPuddingFamily() {
-        boolean deviceOk = Build.DEVICE != null
-                && Build.DEVICE.toLowerCase().contains("pudding");
-        String buildId = (Build.ID != null && !Build.ID.isEmpty()) ? Build.ID : Build.DISPLAY;
-        boolean hyperOs4 = buildId != null && buildId.startsWith("OS4");
-        return deviceOk && hyperOs4;
+        return isPuddingDevice() && isHyperOs4();
     }
 
-    private boolean isPuddingBuild() {
-        String dev = android.os.Build.DEVICE;
-        boolean deviceOk = dev != null && dev.contains("pudding");
-        String[] buildSources = {
-                android.os.Build.DISPLAY,
-                android.os.Build.ID,
-                android.os.Build.FINGERPRINT,
-                android.os.Build.VERSION.INCREMENTAL,
-        };
-        boolean buildOk = false;
-        for (String s : buildSources) {
-            if (s != null && s.contains(EXPECT_BUILD)) {
-                buildOk = true;
-                break;
-            }
+    /** Global 4.0.1.0 (verified on hardware) or China CN (Dream-Rainy verified). */
+    private boolean isVerifiedBuild() {
+        if (!isPuddingDevice()) {
+            return false;
         }
-        return deviceOk && buildOk;
+        String id = buildId();
+        return id.contains(EXPECT_BUILD) || id.contains("CNXM");
+    }
+
+    private boolean isPuddingDevice() {
+        return Build.DEVICE != null && Build.DEVICE.toLowerCase().contains("pudding");
+    }
+
+    private boolean isHyperOs4() {
+        return buildId().startsWith("OS4");
+    }
+
+    private String buildId() {
+        if (Build.ID != null && !Build.ID.isEmpty()) {
+            return Build.ID;
+        }
+        return Build.DISPLAY != null ? Build.DISPLAY : "";
     }
 
     private void refreshStatus() {
@@ -227,7 +229,7 @@ public class MainActivity extends Activity {
             shizuku = "Shizuku: unavailable (" + t.getClass().getSimpleName() + ")";
         }
 
-        String target = st == 0 ? "VERIFIED BUILD (4.0.1.0)"
+        String target = st == 0 ? "VERIFIED BUILD (global / CN)"
                 : st == 1 ? "EXPERIMENTAL (unverified build)"
                 : "UNSUPPORTED (not Xiaomi 17 / HyperOS 4)";
         statusView.setText(

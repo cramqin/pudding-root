@@ -1,6 +1,7 @@
 package com.puddingroot;
 
 import android.content.Context;
+import android.os.Build;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -63,10 +64,22 @@ public class RootRunner implements Runnable {
         return sh(command);
     }
 
+    /** China (CN) builds use the CN offsets; global/EU/IN fall back to global. */
+    private static boolean isCnBuild() {
+        String[] sources = {Build.ID, Build.DISPLAY, Build.FINGERPRINT};
+        for (String s : sources) {
+            if (s != null && s.contains("CNXM")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public void run() {
         try {
-            String lib = ctx.getApplicationInfo().nativeLibraryDir + "/libtimer.so";
+            String libName = isCnBuild() ? "libtimer-cn.so" : "libtimer.so";
+            String lib = ctx.getApplicationInfo().nativeLibraryDir + "/" + libName;
             String tmp = "/data/local/tmp/a/ptimer";
             String launch = "export PATH=/system/bin:/system/xbin:/sbin; "
                     + "mkdir -p /data/local/tmp/a; "
@@ -74,7 +87,7 @@ public class RootRunner implements Runnable {
                     + " && cd /data/local/tmp"
                     + " && KSU_PKG='" + ksuPkg + "' " + tmp + " fake -d";
 
-            sink.onLine("staging payload…");
+            sink.onLine("staging payload (" + libName + ")…");
             sh(launch);
             sink.onLine("exploit launched. watching timer.log (this is probabilistic; "
                     + "if it misses, reboot and retry)…");
