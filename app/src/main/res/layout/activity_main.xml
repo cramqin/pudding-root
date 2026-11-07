@@ -170,10 +170,24 @@
                 android:layout_width="0dp"
                 android:layout_height="44dp"
                 android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:backgroundTint="#293240"
+                android:tooltipText="Reboot the device."
+                android:text="REBOOT"
+                android:textAllCaps="false"
+                android:textColor="#E8EDF4"
+                android:textSize="11sp" />
+
+            <Button
+                android:id="@+id/shutdown"
+                android:layout_width="0dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="4dp"
                 android:layout_weight="1"
                 android:backgroundTint="#293240"
                 android:tooltipText="Power off, wait ~2 minutes, then turn on for the best success rate."
-                android:text="REBOOT"
+                android:text="SHUTDOWN"
                 android:textAllCaps="false"
                 android:textColor="#E8EDF4"
                 android:textSize="11sp" />

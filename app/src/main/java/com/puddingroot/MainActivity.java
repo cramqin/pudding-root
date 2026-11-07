@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     private Button shizukuBtn;
     private Button copyLogBtn;
     private Button rebootBtn;
+    private Button shutdownBtn;
     private Button softBootBtn;
     private EditText pkgEdit;
     private Spinner managerSpinner;
@@ -66,6 +67,7 @@ public class MainActivity extends Activity {
         shizukuBtn = findViewById(R.id.shizuku);
         copyLogBtn = findViewById(R.id.copy_log);
         rebootBtn = findViewById(R.id.reboot);
+        shutdownBtn = findViewById(R.id.shutdown);
         softBootBtn = findViewById(R.id.soft_boot);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
@@ -104,6 +106,7 @@ public class MainActivity extends Activity {
         shizukuBtn.setOnClickListener(v -> requestShizuku());
         copyLogBtn.setOnClickListener(v -> copyLog());
         rebootBtn.setOnClickListener(v -> rebootDevice());
+        shutdownBtn.setOnClickListener(v -> shutdownDevice());
         softBootBtn.setOnClickListener(v -> softRebootDevice());
 
         refreshStatus();
@@ -344,6 +347,7 @@ public class MainActivity extends Activity {
         rootBtn.setText(running ? "RUNNING… (reboot if stuck)" : "ROOT THIS BOOT");
         rootBtn.setEnabled(shizukuReady && !running);
         rebootBtn.setEnabled(shizukuReady);
+        shutdownBtn.setEnabled(shizukuReady);
         softBootBtn.setVisibility(rooted ? android.view.View.VISIBLE : android.view.View.GONE);
         softBootBtn.setEnabled(rooted && !running);
         copyLogBtn.setEnabled(logView.length() > 0);
@@ -548,6 +552,12 @@ public class MainActivity extends Activity {
     private void rebootDevice() {
         issuePowerCommand("svc power reboot 2>&1 || setprop sys.powerctl reboot 2>&1",
                 "Reboot", "Rebooting…", "reboot");
+    }
+
+    private void shutdownDevice() {
+        issuePowerCommand(
+                "svc power shutdown 2>&1 || /system/bin/su -c 'setprop sys.powerctl shutdown' 2>&1",
+                "Shutdown", "Shutting down…", "shutdown");
     }
 
     private void softRebootDevice() {
