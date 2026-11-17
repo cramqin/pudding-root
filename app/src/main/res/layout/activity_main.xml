@@ -258,6 +258,7 @@
             android:padding="14dp"
             android:textColor="#B9F6CA"
             android:textIsSelectable="true"
+            android:cursorVisible="true"
             android:textSize="11sp" />
     </LinearLayout>
 </ScrollView>
