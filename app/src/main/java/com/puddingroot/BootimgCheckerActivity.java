@@ -128,11 +128,6 @@ public class BootimgCheckerActivity extends Activity {
                         throw new IOException("Invalid kernel size: " + kernelSize);
                     }
                     appendLog("kernel_size=" + kernelSize + " page_size=" + pageSize);
-                    // Extract kernel version string from the image
-                    String kver = extractKernelVersion(kernel);
-                    if (kver != null) {
-                        appendLog("kernel_version=" + kver);
-                    }
 
                     updateProgress(50, "Extracting kernel payload…");
                     // Read kernel payload
@@ -158,6 +153,11 @@ public class BootimgCheckerActivity extends Activity {
                         appendLog("decompressed xz -> " + kernel.length + " bytes");
                     } else {
                         appendLog("raw Image (magic " + String.format("%02x%02x", kernel[0] & 0xff, kernel[1] & 0xff) + ")");
+                    }
+                    // Extract kernel version string from the image
+                    String kver = extractKernelVersion(kernel);
+                    if (kver != null) {
+                        appendLog("kernel_version=" + kver);
                     }
 
                     updateProgress(80, "Checking call-site offsets…");
