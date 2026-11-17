@@ -5,8 +5,11 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.ContentResolver;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -15,12 +18,16 @@ import android.text.method.ScrollingMovementMethod;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ArrayAdapter;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 
@@ -48,14 +55,20 @@ public class MainActivity extends Activity {
     private Button rebootBtn;
     private Button shutdownBtn;
     private Button softBootBtn;
+    private Button pickBootimgBtn;
     private EditText pkgEdit;
     private Spinner managerSpinner;
     private SharedPreferences prefs;
+    private ProgressBar checkProgress;
+    private TextView checkStatus;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private volatile boolean running = false;
     private volatile boolean rooted = false;
     private volatile boolean rootChecked = false;
     private volatile boolean rootChecking = false;
+    private volatile boolean checkingBootimg = false;
+
+    private static final int PICK_BOOTIMG_REQUEST = 4201;
 
     private static final String CURRENT_SPOOF = "kqvdie.zeykvw.hpbcyd";
     private String[] managerLabels = new String[0];
@@ -76,6 +89,9 @@ public class MainActivity extends Activity {
         rebootBtn = findViewById(R.id.reboot);
         shutdownBtn = findViewById(R.id.shutdown);
         softBootBtn = findViewById(R.id.soft_boot);
+        pickBootimgBtn = findViewById(R.id.pick_bootimg);
+        checkProgress = findViewById(R.id.check_progress);
+        checkStatus = findViewById(R.id.check_status);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
         logView.setMovementMethod(new ScrollingMovementMethod());
@@ -115,6 +131,7 @@ public class MainActivity extends Activity {
         rebootBtn.setOnClickListener(v -> rebootDevice());
         shutdownBtn.setOnClickListener(v -> shutdownDevice());
         softBootBtn.setOnClickListener(v -> softRebootDevice());
+        pickBootimgBtn.setOnClickListener(v -> pickBootimg());
 
         refreshStatus();
         if (deviceStatus() != 0) {
@@ -689,6 +706,191 @@ public class MainActivity extends Activity {
                 }
             });
         }).start();
+    }
+
+    private void pickBootimg() {
+        if (checkingBootimg) {
+            return;
+        }
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        String[] mimeTypes = {"application/octet-stream"};
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
+        startActivityForResult(intent, PICK_BOOTIMG_REQUEST);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == PICK_BOOTIMG_REQUEST && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            if (uri != null) {
+                checkBootimg(uri);
+            }
+        }
+    }
+
+    private void checkBootimg(Uri uri) {
+        if (checkingBootimg) {
+            return;
+        }
+        checkingBootimg = true;
+        ui.post(() -> {
+            pickBootimgBtn.setEnabled(false);
+            checkProgress.setVisibility(android.view.View.VISIBLE);
+            checkProgress.setProgress(0);
+            checkStatus.setVisibility(android.view.View.VISIBLE);
+            checkStatus.setText("Preparing…");
+        });
+        appendLog("\n=== Boot Image Check started ===");
+
+        new Thread(() -> {
+            try {
+                updateCheckProgress(10, "Reading boot.img header…");
+                // Copy URI content to a temp file we can random-access
+                String tempPath = getCacheDir().getAbsolutePath() + "/bootimg_check_" + System.currentTimeMillis() + ".img";
+                try (InputStream in = getContentResolver().openInputStream(uri);
+                     java.io.FileOutputStream out = new java.io.FileOutputStream(tempPath)) {
+                    byte[] buf = new byte[8192];
+                    int len;
+                    while ((len = in.read(buf)) > 0) {
+                        out.write(buf, 0, len);
+                    }
+                }
+
+                updateCheckProgress(30, "Verifying boot.img header…");
+                // Parse header
+                try (FileInputStream fis = new FileInputStream(tempPath)) {
+                    byte[] hdr = new byte[4096];
+                    fis.read(hdr);
+                    if (!java.util.Arrays.equals(java.util.Arrays.copyOfRange(hdr, 0, 8), "ANDROID!".getBytes())) {
+                        throw new IOException("Not a valid boot.img (missing ANDROID! magic)");
+                    }
+                    int kernelSize = readU32(hdr, 8);
+                    int pageSize = readU32(hdr, 36);
+                    if (pageSize == 0) pageSize = 4096;
+                    int kernelOff = pageSize;
+                    if (kernelSize <= 0 || kernelSize > 200_000_000) {
+                        throw new IOException("Invalid kernel size: " + kernelSize);
+                    }
+                    appendLog("kernel_size=" + kernelSize + " page_size=" + pageSize);
+
+                    updateCheckProgress(50, "Extracting kernel payload…");
+                    // Read kernel payload
+                    byte[] kernel = new byte[kernelSize];
+                    fis.getChannel().position(kernelOff);
+                    int read = 0;
+                    while (read < kernelSize) {
+                        int n = fis.read(kernel, read, kernelSize - read);
+                        if (n <= 0) throw new IOException("Unexpected EOF reading kernel");
+                        read += n;
+                    }
+
+                    // Decompress if needed
+                    if (kernel.length >= 2 && kernel[0] == 0x1f && kernel[1] == 0x8b) {
+                        updateCheckProgress(60, "Decompressing gzip kernel…");
+                        kernel = decompressGzip(kernel);
+                        appendLog("decompressed gzip -> " + kernel.length + " bytes");
+                    } else if (kernel.length >= 6
+                            && kernel[0] == (byte)0xfd && kernel[1] == '7' && kernel[2] == 'z'
+                            && kernel[3] == 'X' && kernel[4] == 'Z' && kernel[5] == 0) {
+                        updateCheckProgress(60, "Decompressing xz kernel…");
+                        kernel = decompressXz(kernel);
+                        appendLog("decompressed xz -> " + kernel.length + " bytes");
+                    } else {
+                        appendLog("raw Image (magic " + String.format("%02x%02x", kernel[0] & 0xff, kernel[1] & 0xff) + ")");
+                    }
+
+                    updateCheckProgress(80, "Checking call-site offsets…");
+                    // Check the two call sites
+                    boolean ok1 = checkCallSite(kernel, 0xffffffc08035477cL, "do_timer_create");
+                    boolean ok2 = checkCallSite(kernel, 0xffffffc0800f42d8L, "copy_process");
+
+                    updateCheckProgress(100, "Done");
+                    ui.post(() -> {
+                        if (ok1 && ok2) {
+                            checkStatus.setText("✓ PASS — offsets match current payload");
+                            appendLog("RESULT: ✓ PASS — both call sites match the exploit offsets");
+                        } else {
+                            checkStatus.setText("✗ FAIL — offsets do not match");
+                            appendLog("RESULT: ✗ FAIL — call site mismatch (new offsets needed)");
+                        }
+                    });
+                }
+            } catch (Throwable t) {
+                ui.post(() -> {
+                    checkStatus.setText("Error: " + t.getMessage());
+                    appendLog("ERROR: " + t);
+                });
+            } finally {
+                checkingBootimg = false;
+                ui.post(() -> {
+                    pickBootimgBtn.setEnabled(true);
+                    checkProgress.setVisibility(android.view.View.GONE);
+                });
+            }
+        }).start();
+    }
+
+    private void updateCheckProgress(int progress, String status) {
+        ui.post(() -> {
+            checkProgress.setProgress(progress);
+            checkStatus.setText(status);
+        });
+    }
+
+    private int readU32(byte[] data, int off) {
+        return ((data[off] & 0xff) |
+                ((data[off+1] & 0xff) << 8) |
+                ((data[off+2] & 0xff) << 16) |
+                ((data[off+3] & 0xff) << 24));
+    }
+
+    private boolean checkCallSite(byte[] kernel, long retVaddr, String name) {
+        // The kernel Image maps its _text at RELATIVE_BASE (0xffffffc080000000)
+        // File offset = vaddr - RELATIVE_BASE
+        final long RELATIVE_BASE = 0xffffffc080000000L;
+        long fileOff = retVaddr - RELATIVE_BASE;
+        long blFile = fileOff - 4;
+        if (blFile < 0 || blFile + 4 > kernel.length) {
+            appendLog("[" + name + "] OUT OF RANGE");
+            return false;
+        }
+        int insn = readU32(kernel, (int)blFile);
+        // bl encoding: top 6 bits = 0b100101 (0x25)
+        if ((insn >> 26) != 0x25) {
+            appendLog("[" + name + "] NOT A BL at file " + Long.toHexString(blFile) + ": " + String.format("%08x", insn));
+            return false;
+        }
+        // bl target: imm26 is bits 25-0, sign-extended, << 2
+        int imm26 = insn & 0x3ffffff;
+        if ((imm26 & 0x2000000) != 0) imm26 -= 0x4000000;
+        long blVaddr = retVaddr - 4;
+        long target = blVaddr + (imm26 << 2);
+        boolean ok = (0xffffffc000000000L <= target && target <= 0xffffffff00000000L);
+        appendLog("[" + name + "] bl at vaddr " + Long.toHexString(blVaddr)
+                + " -> target " + Long.toHexString(target) + " " + (ok ? "OK" : "BAD"));
+        return ok;
+    }
+
+    private byte[] decompressGzip(byte[] data) throws IOException {
+        java.io.ByteArrayInputStream bis = new java.io.ByteArrayInputStream(data);
+        java.util.zip.GZIPInputStream gis = new java.util.zip.GZIPInputStream(bis);
+        java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int len;
+        while ((len = gis.read(buf)) > 0) {
+            bos.write(buf, 0, len);
+        }
+        gis.close();
+        return bos.toByteArray();
+    }
+
+    private byte[] decompressXz(byte[] data) throws IOException {
+        // Use LZMA from XZ for Java if available; fallback to external tool not possible here.
+        // For now, throw since we shouldn't hit this on pudding (it's MZ raw).
+        throw new IOException("XZ decompression not implemented (not needed for pudding)");
     }
 
     private void toast(String s) {
