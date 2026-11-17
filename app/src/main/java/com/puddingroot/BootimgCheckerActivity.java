@@ -159,7 +159,7 @@ public class BootimgCheckerActivity extends Activity {
                     boolean ok2_global = checkCallSite(kernel, 0xffffffc0800f42d8L, "copy_process (global)");
 
                     boolean ok1_cn = checkCallSite(kernel, 0xffffffc0801f9338L, "do_timer_create (cn)");
-                    boolean ok2_cn = checkCallSite(kernel, 0xffffffc0800ddad0L, "copy_process (cn)");
+                    boolean ok2_cn = checkCallSite(kernel, 0xffffffc0800ddadcL, "copy_process (cn)");
 
                     boolean ok_global = ok1_global && ok2_global;
                     boolean ok_cn = ok1_cn && ok2_cn;
