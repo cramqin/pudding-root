@@ -92,8 +92,11 @@ public class BootimgCheckerActivity extends Activity {
             progress.setProgress(0);
             statusView.setVisibility(android.view.View.VISIBLE);
             statusView.setText("Preparing…");
+            logView.setText("");  // clear log on new selection
         });
+        String fileName = uri.getLastPathSegment();
         appendLog("=== Boot Image Check started ===");
+        appendLog("File: " + (fileName != null ? fileName : "(unknown)"));
 
         new Thread(() -> {
             try {
@@ -125,6 +128,11 @@ public class BootimgCheckerActivity extends Activity {
                         throw new IOException("Invalid kernel size: " + kernelSize);
                     }
                     appendLog("kernel_size=" + kernelSize + " page_size=" + pageSize);
+                    // Extract kernel version string from the image
+                    String kver = extractKernelVersion(kernel);
+                    if (kver != null) {
+                        appendLog("kernel_version=" + kver);
+                    }
 
                     updateProgress(50, "Extracting kernel payload…");
                     // Read kernel payload
@@ -252,5 +260,31 @@ public class BootimgCheckerActivity extends Activity {
 
     private void toast(String s) {
         Toast.makeText(this, s, Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Extract the Linux version string from a raw arm64 kernel Image.
+     * The string "Linux version " appears in the kernel's banner.
+     */
+    private String extractKernelVersion(byte[] kernel) {
+        String needle = "Linux version ";
+        byte[] needleBytes = needle.getBytes();
+        for (int i = 0; i < kernel.length - needleBytes.length; i++) {
+            boolean match = true;
+            for (int j = 0; j < needleBytes.length; j++) {
+                if (kernel[i + j] != needleBytes[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                int end = i + needleBytes.length;
+                while (end < kernel.length && kernel[end] != '\n' && kernel[end] != '\0') {
+                    end++;
+                }
+                return new String(kernel, i, end - i, java.nio.charset.StandardCharsets.UTF_8);
+            }
+        }
+        return null;
     }
 }
