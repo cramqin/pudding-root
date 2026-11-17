@@ -47,12 +47,12 @@ public class MainActivity extends Activity {
     private TextView logView;
     private Button rootBtn;
     private Button shizukuBtn;
-    private Button copyLogBtn;
+    private Button copyRunLogBtn;
     private Button rebootBtn;
     private Button shutdownBtn;
     private Button softBootBtn;
     private Button openCheckerBtn;
-    private Button clearLogBtn;
+    private Button clearRunLogBtn;
     private EditText pkgEdit;
     private Spinner managerSpinner;
     private SharedPreferences prefs;
@@ -77,12 +77,12 @@ public class MainActivity extends Activity {
         logView = findViewById(R.id.log);
         rootBtn = findViewById(R.id.root);
         shizukuBtn = findViewById(R.id.shizuku);
-        copyLogBtn = findViewById(R.id.copy_run_log);
         rebootBtn = findViewById(R.id.reboot);
         shutdownBtn = findViewById(R.id.shutdown);
         softBootBtn = findViewById(R.id.soft_boot);
         openCheckerBtn = findViewById(R.id.open_checker);
-        clearLogBtn = findViewById(R.id.clear_run_log);
+        copyRunLogBtn = findViewById(R.id.copy_run_log);
+        clearRunLogBtn = findViewById(R.id.clear_run_log);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
         logView.setMovementMethod(new ScrollingMovementMethod());
@@ -118,8 +118,8 @@ public class MainActivity extends Activity {
         Shizuku.addRequestPermissionResultListener(permListener);
         rootBtn.setOnClickListener(v -> startRoot());
         shizukuBtn.setOnClickListener(v -> requestShizuku());
-        copyLogBtn.setOnClickListener(v -> copyLog());
-        clearLogBtn.setOnClickListener(v -> clearLog());
+        copyRunLogBtn.setOnClickListener(v -> copyLog());
+        clearRunLogBtn.setOnClickListener(v -> clearLog());
         rebootBtn.setOnClickListener(v -> rebootDevice());
         shutdownBtn.setOnClickListener(v -> shutdownDevice());
         softBootBtn.setOnClickListener(v -> softRebootDevice());
@@ -424,6 +424,8 @@ public class MainActivity extends Activity {
                     + "          ? could not read device kernel";
         }
 
+        statusView.setHorizontallyScrolling(false);
+        statusView.setSingleLine(false);
         statusView.setText(
                 target + "\n"
                         + "Device   " + dev + "\n"
@@ -439,7 +441,7 @@ public class MainActivity extends Activity {
         shutdownBtn.setEnabled(shizukuReady);
         softBootBtn.setVisibility(rooted ? android.view.View.VISIBLE : android.view.View.GONE);
         softBootBtn.setEnabled(rooted && !running);
-        copyLogBtn.setEnabled(logView.length() > 0);
+        copyRunLogBtn.setEnabled(logView.length() > 0);
     }
 
     private boolean packageInstalled(String packageName) {
@@ -635,7 +637,7 @@ public class MainActivity extends Activity {
 
     private void appendLog(String s) {
         logView.append(s + "\n");
-        copyLogBtn.setEnabled(logView.length() > 0);
+        copyRunLogBtn.setEnabled(logView.length() > 0);
     }
 
     private void copyLog() {
@@ -646,7 +648,7 @@ public class MainActivity extends Activity {
 
     private void clearLog() {
         logView.setText("");
-        copyLogBtn.setEnabled(false);
+        copyRunLogBtn.setEnabled(false);
     }
 
     private void rebootDevice() {
