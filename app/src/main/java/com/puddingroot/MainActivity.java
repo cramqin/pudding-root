@@ -33,6 +33,13 @@ public class MainActivity extends Activity {
     /** Build id is set at boot and is NOT spoofable by KernelSU. */
     static final String EXPECT_BUILD = "4.0.1.0";
 
+    /** Kernel the active GLOBAL payload was built against (pudding-global offsets). */
+    static final String EXPECT_KERNEL_GLOBAL =
+            "6.12.69-android16-6-g0a1dc0413ec7-ab16271006-4k";
+    /** Kernel the active CN payload was built against (pudding offsets). */
+    static final String EXPECT_KERNEL_CN =
+            "6.12.69-android16-6-g43b5ab7e247d-abogki561813157-4k";
+
     private TextView statusView;
     private TextView logView;
     private Button rootBtn;
@@ -115,6 +122,15 @@ public class MainActivity extends Activity {
                     + "global 4.0.1.0 / CN). Running may fail or crash the kernel — "
                     + "proceed at your own risk.");
         }
+        int km = kernelMatch();
+        if (km == 1) {
+            appendLog("⚠ KERNEL MISMATCH: payload was built for " + expectedKernel()
+                    + " but this device is running " + kernelVersion()
+                    + ". The exploit offsets will not line up. Do not run — "
+                    + "extract this build's offsets first (see exploit/src/devices).");
+        } else if (km == 0) {
+            appendLog("kernel matches payload offsets (" + kernelVersion() + ")");
+        }
     }
 
     @Override
@@ -174,6 +190,40 @@ public class MainActivity extends Activity {
             }
         }
         return "?";
+    }
+
+    /** Kernel the currently-selected payload was compiled against. */
+    private String expectedKernel() {
+        return isCnBuild() ? EXPECT_KERNEL_CN : EXPECT_KERNEL_GLOBAL;
+    }
+
+    /** CN vs global payload selection, mirrors RootRunner.isCnBuild(). */
+    private boolean isCnBuild() {
+        for (String s : buildSources()) {
+            if (s != null && s.contains("CNXM")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Does the device kernel match the payload's offsets?
+     * 0 = match, 1 = mismatch, 2 = unreadable.
+     *
+     * The exploit's kallsyms addresses and call-site values are compile-time
+     * constants baked into the native payload, so a kernel string mismatch
+     * means the offsets will not line up -- the write will miss, or hit the
+     * wrong address and panic. A match is a strong positive signal; it is not
+     * a guarantee, since two builds can share a release string but differ.
+     */
+    private int kernelMatch() {
+        String live = kernelVersion();
+        String expected = expectedKernel();
+        if (live.isEmpty() || live.equals("?")) {
+            return 2;
+        }
+        return live.equals(expected) ? 0 : 1;
     }
 
     /** 0 = verified build, 1 = experimental (pudding/HyperOS 4), 2 = unsupported. */
@@ -335,12 +385,27 @@ public class MainActivity extends Activity {
         } else {
             rootState = rooted ? "ROOTED (KernelSU loaded)" : "not rooted";
         }
+        String payloadLine;
+        int km = kernelMatch();
+        if (km == 0) {
+            payloadLine = "Payload   " + expectedKernel() + "\n"
+                    + "          ✓ kernel matches payload offsets";
+        } else if (km == 1) {
+            payloadLine = "Payload   " + expectedKernel() + "\n"
+                    + "          ⚠ KERNEL MISMATCH — payload offsets are for a "
+                    + "different kernel\n"
+                    + "          Device   " + kernel + " (do not run)";
+        } else {
+            payloadLine = "Payload   " + expectedKernel() + "\n"
+                    + "          ? could not read device kernel";
+        }
+
         statusView.setText(
                 target + "\n"
                         + "Device   " + dev + "\n"
                         + "Target   Xiaomi 17 / HyperOS 4\n"
                         + "Build    " + build + "\n"
-                        + "Kernel   " + kernel + "\n"
+                        + payloadLine + "\n"
                         + rootState + "\n"
                         + shizuku);
         shizukuBtn.setText(shizukuReady ? "SHIZUKU ACCESS GRANTED" : "REQUEST SHIZUKU ACCESS");
