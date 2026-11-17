@@ -32,6 +32,7 @@ public final class Notifier {
         }
         ensureChannel(ctx);
         Intent i = new Intent(ctx, MainActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent pi = PendingIntent.getActivity(ctx, 0, i,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification n = new Notification.Builder(ctx, CHANNEL)

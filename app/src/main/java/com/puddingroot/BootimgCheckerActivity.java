@@ -1,6 +1,8 @@
 package com.puddingroot;
 
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
@@ -23,6 +25,8 @@ public class BootimgCheckerActivity extends Activity {
 
     private Button pickBtn;
     private Button closeBtn;
+    private Button copyLogBtn;
+    private Button clearLogBtn;
     private ProgressBar progress;
     private TextView statusView;
     private TextView logView;
@@ -36,12 +40,26 @@ public class BootimgCheckerActivity extends Activity {
 
         pickBtn = findViewById(R.id.pick_bootimg);
         closeBtn = findViewById(R.id.close_btn);
+        copyLogBtn = findViewById(R.id.copy_check_log);
+        clearLogBtn = findViewById(R.id.clear_check_log);
         progress = findViewById(R.id.check_progress);
         statusView = findViewById(R.id.check_status);
         logView = findViewById(R.id.check_log);
 
         pickBtn.setOnClickListener(v -> pickBootimg());
         closeBtn.setOnClickListener(v -> finish());
+        copyLogBtn.setOnClickListener(v -> copyLog());
+        clearLogBtn.setOnClickListener(v -> clearLog());
+    }
+
+    private void copyLog() {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        clipboard.setPrimaryClip(ClipData.newPlainText("Boot Image Check log", logView.getText()));
+        toast("Log copied");
+    }
+
+    private void clearLog() {
+        logView.setText("");
     }
 
     private void pickBootimg() {

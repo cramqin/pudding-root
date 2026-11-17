@@ -52,6 +52,7 @@ public class MainActivity extends Activity {
     private Button shutdownBtn;
     private Button softBootBtn;
     private Button openCheckerBtn;
+    private Button clearLogBtn;
     private EditText pkgEdit;
     private Spinner managerSpinner;
     private SharedPreferences prefs;
@@ -81,6 +82,7 @@ public class MainActivity extends Activity {
         shutdownBtn = findViewById(R.id.shutdown);
         softBootBtn = findViewById(R.id.soft_boot);
         openCheckerBtn = findViewById(R.id.open_checker);
+        clearLogBtn = findViewById(R.id.clear_log);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
         logView.setMovementMethod(new ScrollingMovementMethod());
@@ -117,6 +119,7 @@ public class MainActivity extends Activity {
         rootBtn.setOnClickListener(v -> startRoot());
         shizukuBtn.setOnClickListener(v -> requestShizuku());
         copyLogBtn.setOnClickListener(v -> copyLog());
+        clearLogBtn.setOnClickListener(v -> clearLog());
         rebootBtn.setOnClickListener(v -> rebootDevice());
         shutdownBtn.setOnClickListener(v -> shutdownDevice());
         softBootBtn.setOnClickListener(v -> softRebootDevice());
@@ -157,6 +160,13 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // Notification click brings the existing instance to front; don't recreate.
+        setIntent(intent);
+    }
+
     /** Boot-time kernel release from the read-only property (KSU can't spoof it). */
     private String readSystemProperty(String key) {
         try {
@@ -193,12 +203,17 @@ public class MainActivity extends Activity {
     }
 
     private String kernelVersion() {
+        // Prefer the most complete kernel version string (longest).
+        String best = null;
         for (String v : kernelCandidates()) {
             if (v != null && !v.isEmpty()) {
-                return v.trim();
+                String t = v.trim();
+                if (best == null || t.length() > best.length()) {
+                    best = t;
+                }
             }
         }
-        return "?";
+        return best != null ? best : "?";
     }
 
     /** Kernel the currently-selected payload was compiled against. */
@@ -627,6 +642,11 @@ public class MainActivity extends Activity {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         clipboard.setPrimaryClip(ClipData.newPlainText("PuddingRoot log", logView.getText()));
         toast("Log copied");
+    }
+
+    private void clearLog() {
+        logView.setText("");
+        copyLogBtn.setEnabled(false);
     }
 
     private void rebootDevice() {
