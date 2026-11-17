@@ -238,7 +238,7 @@
                 android:textStyle="bold" />
 
             <Button
-                android:id="@+id/copy_log"
+                android:id="@+id/copy_run_log"
                 android:layout_width="wrap_content"
                 android:layout_height="32dp"
                 android:layout_marginStart="8dp"
@@ -249,7 +249,7 @@
                 android:textSize="11sp" />
 
             <Button
-                android:id="@+id/clear_log"
+                android:id="@+id/clear_run_log"
                 android:layout_width="wrap_content"
                 android:layout_height="32dp"
                 android:layout_marginStart="4dp"

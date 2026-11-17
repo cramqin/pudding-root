@@ -77,12 +77,12 @@ public class MainActivity extends Activity {
         logView = findViewById(R.id.log);
         rootBtn = findViewById(R.id.root);
         shizukuBtn = findViewById(R.id.shizuku);
-        copyLogBtn = findViewById(R.id.copy_log);
+        copyLogBtn = findViewById(R.id.copy_run_log);
         rebootBtn = findViewById(R.id.reboot);
         shutdownBtn = findViewById(R.id.shutdown);
         softBootBtn = findViewById(R.id.soft_boot);
         openCheckerBtn = findViewById(R.id.open_checker);
-        clearLogBtn = findViewById(R.id.clear_log);
+        clearLogBtn = findViewById(R.id.clear_run_log);
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
         logView.setMovementMethod(new ScrollingMovementMethod());
