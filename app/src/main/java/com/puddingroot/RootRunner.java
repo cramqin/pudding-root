@@ -35,16 +35,20 @@ public class RootRunner implements Runnable {
     }
 
     /** Shizuku.newProcess is a hidden static API; invoke it reflectively. */
-    private static Process newProcess(String[] cmd) throws Exception {
+    private static Process newProcess(String[] cmd, String[] env) throws Exception {
         Method m = Shizuku.class.getDeclaredMethod(
                 "newProcess", String[].class, String[].class, String.class);
         m.setAccessible(true);
-        return (Process) m.invoke(null, cmd, new String[]{}, "/data/local/tmp");
+        return (Process) m.invoke(null, cmd, env, "/data/local/tmp");
     }
 
-    private static String sh(String command) {
+    private static Process newProcess(String[] cmd) throws Exception {
+        return newProcess(cmd, new String[]{});
+    }
+
+    private static String sh(String command, String[] env) {
         try {
-            Process p = newProcess(new String[]{"/system/bin/sh", "-c", command});
+            Process p = newProcess(new String[]{"/system/bin/sh", "-c", command}, env);
             StringBuilder sb = new StringBuilder();
             try (BufferedReader r = new BufferedReader(
                     new InputStreamReader(p.getInputStream(), "UTF-8"))) {
@@ -85,10 +89,10 @@ public class RootRunner implements Runnable {
                     + "mkdir -p /data/local/tmp/a; "
                     + "cp '" + lib + "' " + tmp + " && chmod 755 " + tmp
                     + " && cd /data/local/tmp"
-                    + " && KSU_PKG='" + ksuPkg + "' " + tmp + " fake -d";
+                    + " && " + tmp + " fake -d";
 
             sink.onLine("staging payload (" + libName + ")…");
-            sh(launch);
+            sh(launch, new String[]{"KSU_PKG=" + ksuPkg});
             sink.onLine("exploit launched. watching timer.log (this is probabilistic; "
                     + "if it misses, reboot and retry)…");
 

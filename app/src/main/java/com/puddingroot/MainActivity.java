@@ -483,6 +483,12 @@ public class MainActivity extends Activity {
             toast("Select or enter a KernelSU manager package first");
             return;
         }
+        // Package names are only [a-zA-Z0-9.]. Reject anything else up front so
+        // the value can never be interpolated into a shell command as code.
+        if (!pkg.matches("[a-zA-Z0-9.]+")) {
+            toast("Invalid package name: " + pkg);
+            return;
+        }
         if (!packageInstalled(pkg)) {
             new AlertDialog.Builder(this)
                     .setTitle("Manager not installed")
