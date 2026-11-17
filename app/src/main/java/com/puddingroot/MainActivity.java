@@ -858,8 +858,9 @@ public class MainActivity extends Activity {
             return false;
         }
         int insn = readU32(kernel, (int)blFile);
-        // bl encoding: top 6 bits = 0b100101 (0x25)
-        if ((insn >> 26) != 0x25) {
+        // bl encoding: top 6 bits = 0b100101 (0x25). Use >>> (unsigned) because insn
+        // can be negative as a Java int (e.g., 0x97f7b405).
+        if ((insn >>> 26) != 0x25) {
             appendLog("[" + name + "] NOT A BL at file " + Long.toHexString(blFile) + ": " + String.format("%08x", insn));
             return false;
         }
