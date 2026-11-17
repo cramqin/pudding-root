@@ -65,7 +65,11 @@ public class RootRunner implements Runnable {
     }
 
     public static String runShizukuCommand(String command) {
-        return sh(command);
+        return sh(command, new String[]{});
+    }
+
+    private static String sh(String command) {
+        return sh(command, new String[]{});
     }
 
     /** China (CN) builds use the CN offsets; global/EU/IN fall back to global. */
