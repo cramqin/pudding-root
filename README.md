@@ -20,12 +20,30 @@ removes it, and you re-run the app.
 | build | firmware | kernel | status |
 |---|---|---|---|
 | Global | HyperOS `4.0.1.0.XPCMIXM.D01` | `6.12.69-android16-6-g0a1dc0413ec7-ab16271006-4k` | verified on hardware |
-| China (CN) | HyperOS 4 `…XPCCNXM` | `6.12.69-android16-6-g43b5ab7e247d-abogki561813157-4k` | verified upstream (Dream-Rainy) |
+| Global | HyperOS `4.0.3.0.XPCMIXM` | `6.12.69-android16-6-g0a1dc0413ec7-ab16271006-4k` | verified on hardware |
+| China (CN) | HyperOS `4.0.0.9.XPCCNXM` | `6.12.69-android16-6-gb1493ec68d4a-abogki514973465-4k` | verified upstream (Dream-Rainy) |
 
 The app auto-selects the matching payload from the build region (CN vs global)
 and treats **any** Xiaomi 17 on HyperOS 4 (`4.0.0.0` and above) as an
 experimental target rather than hard-blocking it. The exploit offsets are
 build-specific — running an unverified build can fail or panic the kernel.
+
+### Boot Image Checker
+
+A **Boot Image Checker** activity (open it from the main screen) lets you
+verify whether a given `boot.img` matches the exploit offsets **before** you
+run anything. It is read-only, offline, and safe — it only parses the selected
+file, never touches the running kernel.
+
+- **Global builds** (`XPCMIXM`): verified against `4.0.1.0` and `4.0.3.0`
+  boot images — both report **PASS**.
+- **CN builds** (`XPCCNXM`): verified against `4.0.0.9` — reports **PASS**.
+
+The checker inspects the two `bl` call-site instructions that the exploit
+relies on (`do_timer_create` → `kmem_cache_alloc_noprof` and `copy_process`
+→ `kmem_cache_alloc_node_noprof`) and reports which profile matched, if any.
+A mismatch means the offsets won't line up — do not run; extract this build's
+offsets first (see `exploit/src/devices/`).
 
 ## Requirements
 
@@ -71,11 +89,11 @@ full **Reboot** drops the LKM and you must re-root.
 ### GitHub Actions (recommended)
 
 Push to `main`; one push both builds the APK **and** publishes a GitHub
-prerelease. The version comes from [`version.txt`](version.txt) — bump it (e.g.
-`0.0.2-beta`) before pushing a new release.
+release. The version comes from [`version.txt`](version.txt) — bump it (e.g.
+`1.0.0`) before pushing a new release.
 
 The workflow uploads the APK as the `PuddingRoot-apk` artifact and creates a
-prerelease (`v<version>`) with the APK attached.
+release (`v<version>`) with the APK attached.
 
 Releases are signed with a committed keystore (`keystore.p12`), so new versions
 install over the previous one. Rotate the key (and move it to a secret) before

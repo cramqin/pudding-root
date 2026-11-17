@@ -145,7 +145,7 @@
             android:fontFamily="monospace"
             android:padding="14dp"
             android:textColor="#B9F6CA"
-            android:textIsSelectable="true"
+            android:textIsSelectable="false"
             android:textSize="11sp" />
 
         <!-- Close button -->

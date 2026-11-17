@@ -86,8 +86,7 @@ public class MainActivity extends Activity {
         pkgEdit = findViewById(R.id.pkg);
         managerSpinner = findViewById(R.id.manager_spinner);
         logView.setMovementMethod(new ScrollingMovementMethod());
-        logView.setTextIsSelectable(true);
-        logView.setHighlightColor(0x40F3BE62);  // subtle gold highlight
+        logView.setTextIsSelectable(false);
 
         prefs = getSharedPreferences("cfg", MODE_PRIVATE);
         Notifier.ensureChannel(this);
