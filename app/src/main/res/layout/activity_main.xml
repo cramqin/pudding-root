@@ -211,57 +211,16 @@
             android:textColor="#6F7A89"
             android:textSize="11sp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:text="BOOT IMAGE CHECKER"
-            android:textColor="#F3BE62"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Load a boot.img to verify if the exploit offsets match. Safe, read-only, takes ~10s."
-            android:textColor="#8994A4"
-            android:textSize="12sp" />
-
         <Button
-            android:id="@+id/pick_bootimg"
+            android:id="@+id/open_checker"
             android:layout_width="match_parent"
             android:layout_height="44dp"
-            android:layout_marginTop="9dp"
+            android:layout_marginTop="14dp"
             android:backgroundTint="#293240"
-            android:text="SELECT BOOT.IMG"
+            android:text="OPEN BOOT IMAGE CHECKER"
             android:textAllCaps="false"
             android:textColor="#E8EDF4"
             android:textSize="13sp" />
-
-        <ProgressBar
-            android:id="@+id/check_progress"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="8dp"
-            android:layout_marginTop="10dp"
-            android:visibility="gone"
-            android:indeterminate="false"
-            android:max="100"
-            android:progress="0"
-            android:progressTint="#F3BE62"
-            android:progressBackgroundTint="#1E2530" />
-
-        <TextView
-            android:id="@+id/check_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:gravity="center"
-            android:text=""
-            android:textColor="#9BA5B4"
-            android:textSize="12sp"
-            android:visibility="gone" />
 
         <TextView
             android:layout_width="wrap_content"

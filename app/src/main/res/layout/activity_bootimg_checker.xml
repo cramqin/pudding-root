@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:background="#0D1015">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="20dp"
+        android:paddingTop="22dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="28dp">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="Boot Image Checker"
+                android:src="@drawable/ic_launcher" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="14dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Boot Image Checker"
+                    android:textColor="#FFF7E8"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Verify exploit offsets against a boot.img"
+                    android:textColor="#8F9AA8"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Description -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Load a boot.img to verify if the current exploit offsets match. Safe, read-only, takes ~10s. Does not affect the running kernel."
+            android:textColor="#8F9AA8"
+            android:textSize="12sp" />
+
+        <!-- Pick button -->
+        <Button
+            android:id="@+id/pick_bootimg"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="14dp"
+            android:backgroundTint="#293240"
+            android:text="SELECT BOOT.IMG"
+            android:textAllCaps="false"
+            android:textColor="#E8EDF4"
+            android:textSize="13sp" />
+
+        <!-- Progress -->
+        <ProgressBar
+            android:id="@+id/check_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="8dp"
+            android:layout_marginTop="10dp"
+            android:visibility="gone"
+            android:indeterminate="false"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="#F3BE62"
+            android:progressBackgroundTint="#1E2530" />
+
+        <TextView
+            android:id="@+id/check_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:text=""
+            android:textColor="#9BA5B4"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <!-- Log -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="CHECK LOG"
+            android:textColor="#F3BE62"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/check_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="280dp"
+            android:background="@drawable/bg_card"
+            android:fontFamily="monospace"
+            android:padding="14dp"
+            android:textColor="#B9F6CA"
+            android:textIsSelectable="true"
+            android:textSize="11sp" />
+
+        <!-- Close button -->
+        <Button
+            android:id="@+id/close_btn"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#293240"
+            android:text="CLOSE"
+            android:textAllCaps="false"
+            android:textColor="#E8EDF4"
+            android:textSize="13sp" />
+    </LinearLayout>
+</ScrollView>
