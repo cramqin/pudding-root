@@ -153,15 +153,23 @@ public class BootimgCheckerActivity extends Activity {
                     }
 
                     updateProgress(80, "Checking call-site offsets…");
-                    // Check the two call sites
-                    boolean ok1 = checkCallSite(kernel, 0xffffffc08035477cL, "do_timer_create");
-                    boolean ok2 = checkCallSite(kernel, 0xffffffc0800f42d8L, "copy_process");
+                    // Check the two call sites. Try CN offsets first if image looks like CN,
+                    // or just check both.
+                    boolean ok1_global = checkCallSite(kernel, 0xffffffc08035477cL, "do_timer_create (global)");
+                    boolean ok2_global = checkCallSite(kernel, 0xffffffc0800f42d8L, "copy_process (global)");
+
+                    boolean ok1_cn = checkCallSite(kernel, 0xffffffc0801f9338L, "do_timer_create (cn)");
+                    boolean ok2_cn = checkCallSite(kernel, 0xffffffc0800ddad0L, "copy_process (cn)");
+
+                    boolean ok_global = ok1_global && ok2_global;
+                    boolean ok_cn = ok1_cn && ok2_cn;
 
                     updateProgress(100, "Done");
                     ui.post(() -> {
-                        if (ok1 && ok2) {
-                            statusView.setText("✓ PASS — offsets match current payload");
-                            appendLog("RESULT: ✓ PASS — both call sites match the exploit offsets");
+                        if (ok_global || ok_cn) {
+                            String type = ok_cn ? "CN" : "Global";
+                            statusView.setText("✓ PASS — " + type + " offsets match");
+                            appendLog("RESULT: ✓ PASS — " + type + " call sites match the exploit offsets");
                         } else {
                             statusView.setText("✗ FAIL — offsets do not match");
                             appendLog("RESULT: ✗ FAIL — call site mismatch (new offsets needed)");
