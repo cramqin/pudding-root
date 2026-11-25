@@ -1,4 +1,4 @@
-package com.puddingroot;
+package com.pudding;
 
 import android.app.Activity;
 import android.content.ClipData;

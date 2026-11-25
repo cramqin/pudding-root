@@ -1,4 +1,4 @@
-package com.puddingroot;
+package com.pudding;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -11,7 +11,7 @@ import android.os.Build;
 
 public final class Notifier {
 
-    public static final String CHANNEL = "puddingroot";
+    public static final String CHANNEL = "pudding";
     public static final int ID_AUTO = 1001;
 
     private Notifier() {

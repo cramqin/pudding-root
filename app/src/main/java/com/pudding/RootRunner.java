@@ -1,4 +1,4 @@
-package com.puddingroot;
+package com.pudding;
 
 import android.content.Context;
 import android.os.Build;

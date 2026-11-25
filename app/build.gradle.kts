@@ -9,11 +9,11 @@ val keystoreFile = rootProject.file("keystore.p12")
 val appVersion = rootProject.file("version.txt").readText().trim().ifEmpty { "0.0.1-beta" }
 
 android {
-    namespace = "com.puddingroot"
+    namespace = "com.pudding"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.puddingroot"
+        applicationId = "com.pudding"
         minSdk = 31
         targetSdk = 34
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
